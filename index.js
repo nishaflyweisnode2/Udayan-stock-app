@@ -21,7 +21,9 @@ app.get("/", (req, res) => {
 });
 
 
-const routes = require('./routes/userRoute');
+const userRoutes = require('./routes/userRoutes');
+const planRoutes = require('./routes/planRoutes');
+const purchasePlanRoutes = require('./routes/PurchasePlanRoutes');
 
 
 
@@ -42,7 +44,9 @@ mongoose.connect(DB_URI, {
 
 
 
-app.use('/user', routes);
+app.use('/user', userRoutes);
+app.use('/plan', planRoutes);
+app.use('/purchasePlan', purchasePlanRoutes);
 
 
 

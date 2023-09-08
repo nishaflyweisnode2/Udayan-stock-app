@@ -1,3 +1,4 @@
+require("dotenv").config();
 const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -75,9 +76,12 @@ exports.verifyOTP = async (req, res) => {
         }
         user.isVerified = true;
         await user.save();
-        const token = jwt.sign({ userId: user._id }, process.env.SECRET, { expiresIn: process.env.ACCESS_TOKEN_TIME });
+        const token = jwt.sign({ _id: user._id }, process.env.SECRET, { expiresIn: process.env.ACCESS_TOKEN_TIME });
+        console.log("Created Token:", token);
+        console.log(process.env.SECRET)
 
-        return res.status(200).json({ status: 201, message: 'OTP verified successfully', token: token, data: user });
+
+        return res.status(200).json({ status: 200, message: 'OTP verified successfully', token: token, data: user });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
@@ -130,7 +134,7 @@ exports.loginUser = async (req, res) => {
         }
         user.isVerified = true;
 
-        const token = jwt.sign({ userId: user._id }, process.env.SECRET, { expiresIn: process.env.ACCESS_TOKEN_TIME });
+        const token = jwt.sign({ _id: user._id }, process.env.SECRET, { expiresIn: process.env.ACCESS_TOKEN_TIME });
 
         return res.status(200).json({ status: 400, data: token, user });
     } catch (err) {
@@ -142,16 +146,18 @@ exports.loginUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
     try {
+        console.log(req.user);
         const users = await User.find();
-        if (!users) {
-            return res.status(400).json({ status: 400, msg: 'User not found' });
+        if (users.length === 0) {
+            return res.status(404).json({ status: 404, message: 'No users found' });
         }
-        return res.status(200).json({ status: 200, message: "Sucessfully Get All User", data: users });
+        return res.status(200).json({ status: 200, message: "Successfully retrieved all users", data: users });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 };
+
 
 
 exports.getUserById = async (req, res) => {
