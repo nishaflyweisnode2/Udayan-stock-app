@@ -2,13 +2,14 @@ const PurchasePlan = require('../models/PurchasePlanModel');
 const Plan = require('../models/planModel');
 const User = require('../models/userModel');
 
-const { purchasePlanSchema } = require('../validation/PurchasePlanValidation');
+const { purchasePlanSchema, purchasePlanIdSchema } = require('../validation/PurchasePlanValidation');
 
 
 
 exports.buyPlan = async (req, res) => {
     try {
-        const { userId, planId, paymentMethod } = req.body;
+        const userId = req.user
+        const { planId, paymentMethod } = req.body;
 
         const { error } = purchasePlanSchema.validate(req.body);
 
@@ -29,8 +30,9 @@ exports.buyPlan = async (req, res) => {
         }
 
         const purchasePlan = new PurchasePlan({
-            userId,
+            userId: userId._id,
             planId,
+            price: plan.price,
             paymentMethod,
             paymentStatus: 'Pending',
         });
@@ -54,4 +56,38 @@ exports.buyPlan = async (req, res) => {
     }
 };
 
+
+exports.getAllPayments = async (req, res) => {
+    try {
+        const payments = await PurchasePlan.find();
+        return res.status(200).json({ data: payments });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
+
+
+exports.getPaymentById = async (req, res) => {
+    try {
+        const paymentId = req.params.id;
+
+        const { error } = purchasePlanIdSchema.validate(req.params);
+
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        const payment = await PurchasePlan.findById(paymentId);
+
+        if (!payment) {
+            return res.status(404).json({ error: 'Payment not found' });
+        }
+
+        return res.status(200).json({ data: payment });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};
 

@@ -24,6 +24,8 @@ app.get("/", (req, res) => {
 const userRoutes = require('./routes/userRoutes');
 const planRoutes = require('./routes/planRoutes');
 const purchasePlanRoutes = require('./routes/PurchasePlanRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const supportRoutes = require('./routes/supportRoutes');
 
 
 
@@ -47,6 +49,8 @@ mongoose.connect(DB_URI, {
 app.use('/user', userRoutes);
 app.use('/plan', planRoutes);
 app.use('/purchasePlan', purchasePlanRoutes);
+app.use('/feedback', feedbackRoutes);
+app.use('/support', supportRoutes);
 
 
 

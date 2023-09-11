@@ -136,12 +136,13 @@ exports.loginUser = async (req, res) => {
 
         const token = jwt.sign({ _id: user._id }, process.env.SECRET, { expiresIn: process.env.ACCESS_TOKEN_TIME });
 
-        return res.status(200).json({ status: 400, data: token, user });
+        return res.status(200).json({ status: 200, data: token, user });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 };
+
 
 
 exports.getAllUsers = async (req, res) => {

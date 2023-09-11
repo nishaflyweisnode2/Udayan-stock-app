@@ -8,7 +8,6 @@ const verifyToken = (req, res, next) => {
     const token =
         req.get("Authorization")?.split("Bearer ")[1] ||
         req.headers["x-access-token"];
-    console.log("token:", token);
 
     if (!token) {
         return res.status(403).json({
@@ -20,7 +19,6 @@ const verifyToken = (req, res, next) => {
                 return res.status(401).json({ message: "Unauthorized!", });
             }
             try {
-                console.log(decoded);
                 const user = await User.findOne({ _id: decoded._id });
                 if (!user) {
                     return res.status(400).json({

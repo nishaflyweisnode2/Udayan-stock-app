@@ -3,12 +3,6 @@ const mongoose = require('mongoose');
 
 
 exports.purchasePlanSchema = Joi.object({
-    userId: Joi.string().custom((value, helpers) => {
-        if (!mongoose.isValidObjectId(value)) {
-            return helpers.error('any.invalid');
-        }
-        return value;
-    }).required(),
     planId: Joi.string().custom((value, helpers) => {
         if (!mongoose.isValidObjectId(value)) {
             return helpers.error('any.invalid');
@@ -18,4 +12,12 @@ exports.purchasePlanSchema = Joi.object({
     paymentMethod: Joi.string().required(),
 });
 
+exports.purchasePlanIdSchema = Joi.object({
+    id: Joi.string().custom((value, helpers) => {
+        if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }).required(),
+});
 

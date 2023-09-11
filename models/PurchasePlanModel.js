@@ -12,6 +12,10 @@ const purchasePlanSchema = new mongoose.Schema({
         ref: 'Plan',
         required: true,
     },
+    price: {
+        type: Number,
+        required: true,
+    },
     paymentMethod: {
         type: String,
         required: true,

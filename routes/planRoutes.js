@@ -11,9 +11,9 @@ router.post('/api/plans', [authJwt.verifyToken], createPlan);
 
 router.get('/api/plans', [authJwt.verifyToken], getAllPlans);
 
-router.put('/api/plans/:id', /*[authJwt.verifyToken],*/ updatePlan);
+router.put('/api/plans/:id', [authJwt.verifyToken], updatePlan);
 
-router.get('/api/plans/:id', /*[authJwt.verifyToken],*/ getPlanById);
+router.get('/api/plans/:id', [authJwt.verifyToken], getPlanById);
 
 
 module.exports = router;
