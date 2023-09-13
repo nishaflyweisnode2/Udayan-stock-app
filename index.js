@@ -26,6 +26,7 @@ const planRoutes = require('./routes/planRoutes');
 const purchasePlanRoutes = require('./routes/PurchasePlanRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const companyRoutes = require('./routes/companyRoutes');
 
 
 
@@ -51,6 +52,7 @@ app.use('/plan', planRoutes);
 app.use('/purchasePlan', purchasePlanRoutes);
 app.use('/feedback', feedbackRoutes);
 app.use('/support', supportRoutes);
+app.use('/company', companyRoutes);
 
 
 
