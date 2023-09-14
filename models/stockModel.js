@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const stockSchema = new mongoose.Schema({
+    company: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Company',
+    },
     symbol: {
         type: String,
         required: true,
@@ -20,7 +24,7 @@ const stockSchema = new mongoose.Schema({
     marketCap: {
         type: Number,
     },
-    // Other stock-related fields
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Stock', stockSchema);

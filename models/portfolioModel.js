@@ -1,25 +1,29 @@
 const mongoose = require('mongoose');
 
 const portfolioSchema = new mongoose.Schema({
+
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+    },
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Company',
     },
     stockId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Stock',
-        required: true,
     },
     quantity: {
         type: Number,
-        required: true,
     },
-    averagePrice: {
+    currentPrice: {
         type: Number,
-        required: true,
     },
-    // Other portfolio-related fields
+    totalPrice: {
+        type: Number,
+    },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Portfolio', portfolioSchema);

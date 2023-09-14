@@ -44,14 +44,13 @@ exports.performanceValidation = (req, res, next) => {
 };
 
 
-
 exports.createFundamentalsSchema = (req, res, next) => {
     const schema = Joi.object({
         marketCap: Joi.number().required(),
         roe: Joi.number().required(),
         peRatio: Joi.number().required(),
         pbRatio: Joi.number().required(),
-        divYield: Joi.number().required(),
+        divYeild: Joi.number().required(),
         industryPe: Joi.number().required(),
         bookValue: Joi.number().required(),
         debtToEquity: Joi.number().required(),

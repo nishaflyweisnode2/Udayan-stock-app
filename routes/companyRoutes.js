@@ -17,6 +17,8 @@ const {
     createFundamentals,
     getFundamentalsByCompanyId,
     getDailyStats,
+    getDailyStatsByDate,
+    getDailyStatsByDay
 } = require('../controllers/companyController');
 
 const { validateCompany, performanceValidation, createFundamentalsSchema, validateDailyStats } = require('../validation/companyValidation');
@@ -63,5 +65,8 @@ router.get('/api/:companyId/fundamentals', [authJwt.verifyToken], getFundamental
 
 //Daliy updates
 router.get('/api/companies/:companyId/daily-stats', [authJwt.verifyToken], getDailyStats);
+router.get('/api/companies/:companyId/daily-statsBy-date/:date', [authJwt.verifyToken], getDailyStatsByDate);
+router.get('/api/companies/:companyId/daily-statsBy/:day', [authJwt.verifyToken], getDailyStatsByDay);
+
 
 module.exports = router;

@@ -210,59 +210,6 @@ exports.getCompanyEvents = async (req, res) => {
 };
 
 
-// exports.createPerformance = async (req, res) => {
-//     try {
-//         const companyId = req.params.companyId;
-//         const performanceData = req.body;
-
-//         const company = await Company.findById(companyId);
-
-//         if (!company) {
-//             return res.status(404).json({ message: 'Company not found' });
-//         }
-
-//         company.overView.performance = performanceData;
-
-//         await company.save();
-
-//         return res.status(201).json({ message: 'Performance data added successfully', data: company.overView.performance });
-//     } catch (error) {
-//         console.error(error);
-//         return res.status(500).json({ message: 'Internal server error', details: error.message });
-//     }
-// };
-
-// exports.createPerformance = async (req, res) => {
-//     try {
-//         const companyId = req.params.companyId;
-//         const performanceData = req.body;
-
-//         const company = await Company.findById(companyId);
-
-//         if (!company) {
-//             return res.status(404).json({ message: 'Company not found' });
-//         }
-
-//         const historyEntryIndex = company.overView.performance.history.findIndex(entry =>
-//             entry.date.toISOString() === performanceData.date.toISOString()
-//         );
-
-
-//         if (historyEntryIndex !== -1) {
-//             company.overView.performance.history[historyEntryIndex] = performanceData;
-//         } else {
-//             company.overView.performance.history.push(performanceData);
-//         }
-
-//         await company.save();
-
-//         return res.status(201).json({ message: 'Performance data added or updated successfully', data: performanceData });
-//     } catch (error) {
-//         console.error(error);
-//         return res.status(500).json({ message: 'Internal server error', details: error.message });
-//     }
-// };
-
 exports.createPerformance = async (req, res) => {
     try {
         const companyId = req.params.companyId;
@@ -274,25 +221,43 @@ exports.createPerformance = async (req, res) => {
             return res.status(404).json({ message: 'Company not found' });
         }
 
+        if (!company.overView.performance) {
+            company.overView.performance = { history: [] };
+        }
 
+        const existingEntryIndex = company.overView.performance.history.findIndex(entry =>
+            entry.date.toISOString() === new Date(date).toISOString()
+        );
 
-        company.overView.performance.history = {
-            date,
-            Volume,
-            PreviousClose,
-            Open,
-            TodayLow,
-            TodayHigh
+        if (existingEntryIndex !== -1) {
+            const existingEntry = company.overView.performance.history[existingEntryIndex];
+            existingEntry.Volume = Volume;
+            existingEntry.PreviousClose = PreviousClose;
+            existingEntry.Open = Open;
+            existingEntry.TodayLow = TodayLow;
+            existingEntry.TodayHigh = TodayHigh;
+        } else {
+            const newPerformanceEntry = {
+                date,
+                Volume,
+                PreviousClose,
+                Open,
+                TodayLow,
+                TodayHigh
+            };
+
+            company.overView.performance.history.push(newPerformanceEntry);
         }
 
         await company.save();
 
-        return res.status(201).json({ status: 201, message: 'Performance data added or updated successfully', data: performance });
+        return res.status(201).json({ status: 201, message: 'Performance data added or updated successfully' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
+
 
 exports.getPerformanceByCompanyId = async (req, res) => {
     try {
@@ -315,7 +280,7 @@ exports.getPerformanceByCompanyId = async (req, res) => {
 exports.createFundamentals = async (req, res) => {
     try {
         const companyId = req.params.companyId;
-        const { marketCap, roe, peRatio, pbRatio, divYield, industryPe, bookValue, debtToEquity, faceValue } = req.body;
+        const { marketCap, roe, peRatio, pbRatio, divYeild, industryPe, bookValue, debtToEquity, faceValue } = req.body;
 
         const company = await Company.findById(companyId);
 
@@ -328,7 +293,7 @@ exports.createFundamentals = async (req, res) => {
             roe,
             peRatio,
             pbRatio,
-            divYield,
+            divYeild,
             industryPe,
             bookValue,
             debtToEquity,
@@ -382,13 +347,15 @@ exports.getDailyStats = async (req, res) => {
 
         const latestData = historicalData[0];
 
+        const marketCap = company.overView.fundamentals[0]?.marketCap;
+
         const dailyStats = {
             DailyOpen: latestData.Open,
             DailyHigh: Math.max(latestData.Open, latestData.TodayHigh),
             DailyLow: Math.min(latestData.Open, latestData.TodayLow),
             DailyClose: latestData.PreviousClose,
             DailyVolume: latestData.Volume,
-            MarketCap: company.overView.fundamentals.MarketCap,
+            MarketCap: marketCap,
         };
 
         return res.status(200).json({
@@ -400,6 +367,108 @@ exports.getDailyStats = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
+
+
+exports.getDailyStatsByDate = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const dateParam = new Date(req.params.date);
+
+        if (isNaN(dateParam)) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        const company = await Company.findById(companyId);
+
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        const performance = company.overView.performance;
+        const historicalData = performance.history;
+
+        if (!historicalData || historicalData.length === 0) {
+            return res.status(404).json({ message: 'No historical data available' });
+        }
+
+        const dataForDate = historicalData.find(entry => entry.date.getTime() === dateParam.getTime());
+
+        if (!dataForDate) {
+            return res.status(404).json({ message: 'Data for the specified date not found' });
+        }
+
+        const dailyStats = {
+            DailyOpen: dataForDate.Open,
+            DailyHigh: Math.max(dataForDate.Open, dataForDate.TodayHigh),
+            DailyLow: Math.min(dataForDate.Open, dataForDate.TodayLow),
+            DailyClose: dataForDate.PreviousClose,
+            DailyVolume: dataForDate.Volume,
+            MarketCap: company.overView.fundamentals[0]?.marketCap,
+        };
+
+        return res.status(200).json({
+            message: 'Daily statistics retrieved successfully',
+            data: dailyStats,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+
+exports.getDailyStatsByDay = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const day = parseInt(req.params.day);
+
+        if (isNaN(day) || day < 1 || day > 31) {
+            return res.status(400).json({ message: 'Invalid day value' });
+        }
+
+        const company = await Company.findById(companyId);
+
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        const performance = company.overView.performance;
+        const historicalData = performance.history;
+
+        if (!historicalData || historicalData.length === 0) {
+            return res.status(404).json({ message: 'No historical data available' });
+        }
+
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const dataForDate = historicalData.find(entry => {
+            const entryDate = new Date(entry.date);
+            return entryDate.getDate() === day && entryDate.getFullYear() === currentYear;
+        });
+
+        if (!dataForDate) {
+            return res.status(404).json({ message: 'Data for the specified date not found' });
+        }
+
+        const dailyStats = {
+            DailyOpen: dataForDate.Open,
+            DailyHigh: Math.max(dataForDate.Open, dataForDate.TodayHigh),
+            DailyLow: Math.min(dataForDate.Open, dataForDate.TodayLow),
+            DailyClose: dataForDate.PreviousClose,
+            DailyVolume: dataForDate.Volume,
+            MarketCap: company.overView.fundamentals[0]?.marketCap,
+        };
+
+        return res.status(200).json({
+            message: 'Daily statistics retrieved successfully',
+            data: dailyStats,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
 
 
 

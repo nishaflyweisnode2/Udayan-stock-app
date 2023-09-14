@@ -16,7 +16,7 @@ const performanceSchema = new mongoose.Schema({
 
 
 const fundamentalsSchema = new mongoose.Schema({
-    MarketCap: {
+    marketCap: {
         type: Number,
     },
     roe: {
@@ -25,7 +25,7 @@ const fundamentalsSchema = new mongoose.Schema({
     peRatio: {
         type: Number,
     },
-    PbRatio: {
+    pbRatio: {
         type: Number,
     },
     divYeild: {
@@ -100,7 +100,7 @@ const companySchema = new mongoose.Schema({
         type: Number,
     },
     overView: {
-        performance: [performanceSchema],
+        performance: performanceSchema,
         fundamentals: [fundamentalsSchema],
     },
     news: [newsSchema],
