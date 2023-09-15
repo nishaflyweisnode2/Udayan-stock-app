@@ -29,6 +29,9 @@ const supportRoutes = require('./routes/supportRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const stockRoutes = require('./routes/stockRoutes');
 const portfolioRoutes = require('./routes/portfolioRoutes');
+const brokerRoutes = require('./routes/brokerRoutes');
+const storyRoutes = require('./routes/storyRoutes');
+const investingTradingTutorialRoutes = require('./routes/investing&TradingTutorialRoutes');
 
 
 
@@ -57,6 +60,9 @@ app.use('/support', supportRoutes);
 app.use('/company', companyRoutes);
 app.use('/stock', stockRoutes);
 app.use('/portfolio', portfolioRoutes);
+app.use('/broker', brokerRoutes);
+app.use('/story', storyRoutes);
+app.use('/investingTradingTutorialRoutes', investingTradingTutorialRoutes);
 
 
 

@@ -8,7 +8,6 @@ const authJwt = require("../middleware/auth");
 
 
 router.post('/api/support-requests', [authJwt.verifyToken], createSupportRequest);
-
 router.get('/api/supportRequests', [authJwt.verifyToken], getAllSupportRequests);
 
 

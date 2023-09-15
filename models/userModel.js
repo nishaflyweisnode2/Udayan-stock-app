@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema({
     otp: { type: String, },
     isVerified: { type: Boolean, default: false },
     userType: { type: String, enum: ["Admin", "User"], default: "User" },
+    brokers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Broker', },],
+
 }, { timestamps: true });
 
 

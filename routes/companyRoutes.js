@@ -57,7 +57,6 @@ router.get('/api/companies/:companyId/performance', [authJwt.verifyToken], getPe
 
 
 
-
 // Create fundamentals for a company
 router.post('/api/:companyId/fundamentals', [authJwt.verifyToken], createFundamentalsSchema, createFundamentals);
 router.get('/api/:companyId/fundamentals', [authJwt.verifyToken], getFundamentalsByCompanyId);

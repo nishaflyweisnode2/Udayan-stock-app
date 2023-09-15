@@ -1,8 +1,11 @@
 require("dotenv").config();
 const User = require('../models/userModel');
+const Broker = require('../models/brokerModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
+const mongoose = require('mongoose');
+
 
 
 const { registrationSchema, generateOtp, otpSchema, resendOtpSchema, loginSchema, userIdSchema } = require('../validation/userValidation');
@@ -144,7 +147,6 @@ exports.loginUser = async (req, res) => {
 };
 
 
-
 exports.getAllUsers = async (req, res) => {
     try {
         console.log(req.user);
@@ -158,7 +160,6 @@ exports.getAllUsers = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 };
-
 
 
 exports.getUserById = async (req, res) => {
@@ -179,3 +180,71 @@ exports.getUserById = async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 };
+
+
+exports.addBrokerToUser = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const newBrokerId = req.params.brokerId;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const broker = await Broker.findById(newBrokerId);
+
+        if (!broker) {
+            return res.status(404).json({ status: 404, message: 'Broker not found' });
+        }
+
+        if (user.brokers.includes(newBrokerId)) {
+            return res.status(400).json({ status: 400, message: 'Broker already exists in user profile' });
+        }
+
+        user.brokers.push(newBrokerId);
+        await user.save();
+
+        return res.status(200).json({ status: 200, message: 'Broker added to user successfully', data: user });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+
+exports.removeBrokerFromUser = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const brokerId = req.params.brokerId;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const broker = await Broker.findById(brokerId);
+
+        if (!broker) {
+            return res.status(404).json({ status: 404, message: 'Broker not found' });
+        }
+
+        const brokerObjectId = new mongoose.Types.ObjectId(brokerId);
+
+        if (!user.brokers.includes(brokerObjectId)) {
+            return res.status(404).json({ status: 404, message: 'Broker not found in user profile' });
+        }
+
+        user.brokers = user.brokers.filter((id) => id.toString() !== brokerObjectId.toString());
+        await user.save();
+
+        return res.status(200).json({ status: 200, message: 'Broker removed from user successfully', data: user });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+

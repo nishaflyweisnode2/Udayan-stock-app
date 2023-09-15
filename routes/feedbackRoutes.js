@@ -7,9 +7,7 @@ const authJwt = require("../middleware/auth");
 
 
 router.post('/api/feedback', [authJwt.verifyToken], createFeedback);
-
 router.get('/api/feedback', [authJwt.verifyToken], getAllFeedback);
-
 router.get('/api/feedback/:id', [authJwt.verifyToken], getFeedbackById);
 
 

@@ -8,7 +8,12 @@ cloudinary.config({ cloud_name: process.env.cloud_name, api_key: process.env.api
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/companyImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const companyImage = multer({ storage: storage });
 
+const storage1 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/brokerImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
+const brokerImage = multer({ storage: storage1 });
+const storage2 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/brokerImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
+const storyImage = multer({ storage: storage2 });
 
 
 
-module.exports = { companyImage, }
+
+module.exports = { companyImage, brokerImage, storyImage }
