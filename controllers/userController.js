@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const mongoose = require('mongoose');
+const Strategy = require('../models/strategyModel');
+
 
 
 
@@ -247,4 +249,65 @@ exports.removeBrokerFromUser = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
+
+
+exports.chooseStrategy = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { strategy } = req.body;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        if (user.strategy !== strategy) {
+            if (strategy !== 'Investor' && strategy !== 'Trader') {
+                return res.status(400).json({ status: 400, message: 'Invalid strategy' });
+            }
+        }
+
+        console.log("Current User Strategy:", user.strategy);
+
+        const newStrategy = await Strategy.findOne({ name: strategy });
+
+        if (!newStrategy) {
+            return res.status(404).json({ status: 404, message: 'New strategy not found' });
+        }
+
+        user.strategy = strategy;
+        user.strategyId = [newStrategy._id];
+        await user.save();
+
+        res.status(200).json({ status: 200, message: 'User strategy updated successfully', data: user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+
+exports.getChosenStrategies = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        console.log("userId", userId);
+
+        const user = await User.findById(userId)
+            .populate('strategyId')
+            .exec();
+
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const chosenStrategies = user.strategyId.map(strategy => strategy);
+
+        res.status(200).json({ status: 200, message: 'Chosen strategies retrieved successfully', data: chosenStrategies });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
 

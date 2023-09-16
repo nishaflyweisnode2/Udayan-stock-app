@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     userType: { type: String, enum: ["Admin", "User"], default: "User" },
     brokers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Broker', },],
+    strategy: { type: String, enum: ['Investor', 'Trader'], },
+    strategyId: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Strategy', },],
 
 }, { timestamps: true });
 

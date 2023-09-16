@@ -12,8 +12,10 @@ const storage1 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folde
 const brokerImage = multer({ storage: storage1 });
 const storage2 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/brokerImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const storyImage = multer({ storage: storage2 });
+const storage3 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/brokerImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
+const strategyImage = multer({ storage: storage3 });
 
 
 
 
-module.exports = { companyImage, brokerImage, storyImage }
+module.exports = { companyImage, brokerImage, storyImage, strategyImage }
