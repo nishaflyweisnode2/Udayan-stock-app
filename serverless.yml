@@ -1,4 +1,4 @@
-service: "udayanapp"
+service: "udayan-stock"
 
 provider:
     name: aws
@@ -10,8 +10,8 @@ provider:
             - "multipart/form-data"
 functions:
     app:
-        handler: server.handler
-        name: udayanapp
+        handler: index.handler
+        name: udayan-stock
         events:
             - http:
                   path: /
