@@ -10,10 +10,12 @@ const portfolioSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Company',
     },
-    stockId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Stock',
-    },
+    stockId: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Stock',
+        },
+    ],
     quantity: {
         type: Number,
     },

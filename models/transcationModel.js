@@ -24,7 +24,10 @@ const transactionSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    // Other transaction-related fields
+    isBuy: {
+        type: Boolean
+    },
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

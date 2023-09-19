@@ -7,15 +7,27 @@ const mongoose = require('mongoose');
 
 exports.getUserPortfolio = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const userId = req.user.id;
+
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const portfolio = await Portfolio.findOne({ user: req.user.id }).populate('stockId'); //companyId
+        const portfolioItems = await Portfolio.find({ userId }).populate('stockId'); // companyId
 
-        res.status(200).json({ portfolio });
+        const totalQuantity = portfolioItems.reduce((total, item) => total + item.quantity, 0);
+        const totalPrice = portfolioItems.reduce((total, item) => total + item.totalPrice, 0);
+
+        const userDataWithPortfolio = {
+            user,
+            portfolio: portfolioItems,
+            totalQuantity,
+            totalPrice,
+        };
+
+        return res.status(200).json({ status: 200, message: 'Get data Sucessfully ', data: userDataWithPortfolio });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error', details: error.message });
@@ -67,7 +79,7 @@ exports.addStockToPortfolio = async (req, res) => {
 
         await portfolio.save();
 
-        res.status(201).json({ message: 'Stock added to the portfolio successfully', data: portfolio });
+        return res.status(201).json({ status: 201, message: 'Stock added to the portfolio successfully', data: portfolio });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error', details: error.message });
@@ -104,7 +116,7 @@ exports.updatePortfolioQuantity = async (req, res) => {
 
         await portfolio.save();
 
-        res.status(200).json({ message: 'Portfolio quantity updated successfully', data: portfolio });
+        return res.status(200).json({ status: 200, message: 'Portfolio quantity updated successfully', data: portfolio });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error', details: error.message });
@@ -119,7 +131,7 @@ exports.removeStockFromPortfolio = async (req, res) => {
         const portfolio = await Portfolio.findOne({ user: req.user.id });
 
         if (!portfolio) {
-            return res.status(404).json({ message: 'Portfolio not found' });
+            return res.status(404).json({ status: 404, message: 'Portfolio not found' });
         }
 
         portfolio.stocks = portfolio.stocks || [];
@@ -132,7 +144,7 @@ exports.removeStockFromPortfolio = async (req, res) => {
 
         await portfolio.deleteOne({ user: req.user.id, stockId: stockObjectId });
 
-        res.status(200).json({ status: 200, message: 'Stock removed from the portfolio successfully' });
+        return res.status(200).json({ status: 200, message: 'Stock removed from the portfolio successfully' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error', details: error.message });
@@ -150,7 +162,7 @@ exports.viewStockFinancials = async (req, res) => {
             return res.status(404).json({ message: 'Stock not founds' });
         }
 
-        res.status(200).json({ stock });
+        return res.status(200).json({ status: 200, message: 'View sucessfully', data: stock });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error', details: error.message });

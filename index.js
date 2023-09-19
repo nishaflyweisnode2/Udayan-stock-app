@@ -36,6 +36,8 @@ const termAndConditionRoutes = require('./routes/term&ConditionRoutes');
 const strageyRoutes = require('./routes/strategyRoutes');
 const investorRoutes = require('./routes/investorRoutes');
 const traderRoutes = require('./routes/traderRoutes');
+const watchlistRoutes = require('./routes/watchlistRoutes');
+const stockBuyAndSellRoutes = require('./routes/stockBuy&SellRoutes');
 
 
 
@@ -71,6 +73,8 @@ app.use('/termAndCondition', termAndConditionRoutes);
 app.use('/stragey', strageyRoutes);
 app.use('/investor', investorRoutes);
 app.use('/trader', traderRoutes);
+app.use('/watchlist', watchlistRoutes);
+app.use('/stockBuyAndSell', stockBuyAndSellRoutes);
 
 
 
