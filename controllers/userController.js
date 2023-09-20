@@ -311,3 +311,69 @@ exports.getChosenStrategies = async (req, res) => {
 };
 
 
+exports.uploadImage = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        user.image = req.file.path;
+
+        const updateduser = await user.save();
+
+        res.status(200).json({ status: 200, message: "User Image Updated Successfully", data: updateduser });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error', details: error.message });
+    }
+};
+
+
+exports.createAdminUser = async (req, res) => {
+    try {
+        const {
+            firstName,
+            lastName,
+            dateOfBirth,
+            phoneNumber,
+            userName,
+            password,
+            confirmPassword,
+        } = req.body;
+
+        const existingUser = await User.findOne({ userName });
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ status: 400, message: "Password and Confirm Password must match" });
+        }
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const adminUser = new User({
+            firstName: firstName,
+            lastName: lastName,
+            dateOfBirth: dateOfBirth,
+            phoneNumber: phoneNumber,
+            userName: userName,
+            password: hashedPassword,
+            otp: generateOtp(),
+            userType: "Admin"
+        });
+
+        await adminUser.save();
+
+        res.status(201).json({ message: 'Admin user created successfully', data: adminUser });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+

@@ -8,7 +8,7 @@ const serverless = require("serverless-http");
 const app = express();
 const path = require("path");
 const PORT = process.env.PORT || 2613;
-const DB_URI = process.env.DB_URI;
+const DB_URL = process.env.DB_URL;
 
 
 app.use(compression({ threshold: 500 }));
@@ -38,23 +38,9 @@ const investorRoutes = require('./routes/investorRoutes');
 const traderRoutes = require('./routes/traderRoutes');
 const watchlistRoutes = require('./routes/watchlistRoutes');
 const stockBuyAndSellRoutes = require('./routes/stockBuy&SellRoutes');
+const helpRoutes = require('./routes/helpRoutes');
+const referRoutes = require('./routes/referRoutes');
 
-
-
-
-
-
-mongoose.Promise = global.Promise;
-mongoose.set("strictQuery", true);
-mongoose.connect(DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-}).then(() => {
-    console.log('Connected to MongoDB');
-})
-    .catch((error) => {
-        console.error('Error connecting to MongoDB:', error);
-    });
 
 
 
@@ -75,9 +61,22 @@ app.use('/investor', investorRoutes);
 app.use('/trader', traderRoutes);
 app.use('/watchlist', watchlistRoutes);
 app.use('/stockBuyAndSell', stockBuyAndSellRoutes);
+app.use('/help', helpRoutes);
+app.use('/refer', referRoutes);
 
 
 
+mongoose.Promise = global.Promise;
+mongoose.set("strictQuery", true);
+mongoose.connect(DB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => {
+    console.log('Connected to MongoDB');
+})
+    .catch((error) => {
+        console.error('Error connecting to MongoDB:', error);
+    });
 
 
 

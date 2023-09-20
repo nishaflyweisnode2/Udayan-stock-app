@@ -2,7 +2,7 @@ var multer = require("multer");
 require('dotenv').config()
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("cloudinary").v2;
-cloudinary.config({ cloud_name: process.env.cloud_name, api_key: process.env.api_key, api_secret: process.env.api_secret, });
+cloudinary.config({ cloud_name: process.env.CLOUD_NAME, api_key: process.env.CLOUD_KEY, api_secret: process.env.CLOUD_SECRET, });
 
 
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/companyImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
@@ -14,8 +14,10 @@ const storage2 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folde
 const storyImage = multer({ storage: storage2 });
 const storage3 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/brokerImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const strategyImage = multer({ storage: storage3 });
+const storage4 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "UdayanStock/brokerImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
+const userImage = multer({ storage: storage4 });
 
 
 
 
-module.exports = { companyImage, brokerImage, storyImage, strategyImage }
+module.exports = { companyImage, brokerImage, storyImage, strategyImage, userImage }
