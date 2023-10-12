@@ -1,7 +1,7 @@
 require("dotenv").config();
 const User = require('../models/userModel');
 const Broker = require('../models/brokerModel');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const mongoose = require('mongoose');

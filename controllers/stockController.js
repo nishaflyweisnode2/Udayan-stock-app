@@ -132,7 +132,8 @@ exports.getLatestStockUpdates = async (req, res) => {
 
         const trendingStocks = await Stock.find({})
             .skip(skip)
-            .limit(perPage);
+            .limit(perPage)
+            .populate("company");
 
         res.status(200).json(trendingStocks);
     } catch (error) {

@@ -179,7 +179,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/udayan-stock/dev/1695217070717-2023-09-20T13:37:50.717Z/udayan-stock.zip"
+                "S3Key": "serverless/udayan-stock/dev/1697103677942-2023-10-12T09:41:17.942Z/udayan-stock.zip"
               },
               "Handler": "index.handler",
               "Runtime": "nodejs18.x",
@@ -197,14 +197,14 @@
               "AppLogGroup"
             ]
           },
-          "AppLambdaVersionxXv431TEXgaOBPLO0qiAHqm7dbzQaYT0ODeyJNyIec": {
+          "AppLambdaVersionKHhRoJVxwE7Cf1LNIWrgTPk4rxGkX7DSI0h2dMxZNY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AppLambdaFunction"
               },
-              "CodeSha256": "yyqsr3wG/1RV33jdYWILXj2wBHnVfcJSUuj/85GGXb4="
+              "CodeSha256": "crEBzj99+z39jq0Itj3dqHENo5/M+t82sK7qazFga7A="
             }
           },
           "ApiGatewayRestApi": {
@@ -425,7 +425,7 @@
               "AppLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1695217007075": {
+          "ApiGatewayDeployment1697103607024": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -490,7 +490,7 @@
           "AppLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppLambdaVersionxXv431TEXgaOBPLO0qiAHqm7dbzQaYT0ODeyJNyIec"
+              "Ref": "AppLambdaVersionKHhRoJVxwE7Cf1LNIWrgTPk4rxGkX7DSI0h2dMxZNY"
             },
             "Export": {
               "Name": "sls-udayan-stock-dev-AppLambdaFunctionQualifiedArn"
@@ -671,7 +671,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "AppLambdaVersionxXv431TEXgaOBPLO0qiAHqm7dbzQaYT0ODeyJNyIec"
+        "versionLogicalId": "AppLambdaVersionKHhRoJVxwE7Cf1LNIWrgTPk4rxGkX7DSI0h2dMxZNY"
       }
     },
     "configValidationMode": "warn",
@@ -690,10 +690,10 @@
     },
     "layers": {},
     "isDashboardMonitoringPreconfigured": false,
-    "artifact": "C:\\Users\\Dev\\Downloads\\Udayan-stock-app\\.serverless\\udayan-stock.zip"
+    "artifact": "C:\\Users\\Dev\\Downloads\\project\\Udayan-stock-app\\.serverless\\udayan-stock.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/udayan-stock/dev/1695217070717-2023-09-20T13:37:50.717Z",
+    "artifactDirectoryName": "serverless/udayan-stock/dev/1697103677942-2023-10-12T09:41:17.942Z",
     "artifact": "udayan-stock.zip"
   }
 }
