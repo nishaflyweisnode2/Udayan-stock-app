@@ -1,19 +1,36 @@
 const mongoose = require('mongoose');
 
 
-const performanceSchema = new mongoose.Schema({
-    history: [
-        {
-            date: Date,
-            Volume: Number,
-            PreviousClose: Number,
-            Open: Number,
-            TodayLow: Number,
-            TodayHigh: Number,
-        }
-    ],
+// const performanceSchema = new mongoose.Schema({
+//     history: [
+//         {
+//             date: Date,
+//             time: String,
+//             Volume: Number,
+//             PreviousClose: Number,
+//             Open: Number,
+//             TodayLow: Number,
+//             TodayHigh: Number,
+//         }
+//     ],
+// });
+
+const performanceDetailSchema = new mongoose.Schema({
+    time: String,
+    Volume: Number,
+    PreviousClose: Number,
+    Open: Number,
+    TodayLow: Number,
+    TodayHigh: Number,
 });
 
+const performanceSchema = new mongoose.Schema({
+    date: {
+        type: Date,
+        unique: true,
+    },
+    details: [performanceDetailSchema],
+});
 
 const fundamentalsSchema = new mongoose.Schema({
     marketCap: {
@@ -100,7 +117,7 @@ const companySchema = new mongoose.Schema({
         type: Number,
     },
     overView: {
-        performance: performanceSchema,
+        performance: [performanceSchema],
         fundamentals: [fundamentalsSchema],
     },
     news: [newsSchema],

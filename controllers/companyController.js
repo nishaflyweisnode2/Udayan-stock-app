@@ -1,4 +1,8 @@
 const Company = require('../models/companyModel');
+const axios = require('axios');
+const { parse } = require('papaparse');
+const cron = require('node-cron');
+
 
 const { validateCompany, updateValidateCompany, performanceValidation, createFundamentalsSchema } = require('../validation/companyValidation');
 
@@ -328,7 +332,7 @@ exports.getFundamentalsByCompanyId = async (req, res) => {
 };
 
 
-exports.getDailyStats = async (req, res) => {
+exports.getDailyStats1 = async (req, res) => {
     try {
         const companyId = req.params.companyId;
 
@@ -339,13 +343,17 @@ exports.getDailyStats = async (req, res) => {
         }
 
         const performance = company.overView.performance;
+        console.log("performance", performance);
+
         const historicalData = performance.history;
+        console.log("historicalData", historicalData);
 
         if (!historicalData || historicalData.length === 0) {
             return res.status(404).json({ message: 'No historical data available' });
         }
 
         const latestData = historicalData[0];
+        console.log("latestData", latestData);
 
         const marketCap = company.overView.fundamentals[0]?.marketCap;
 
@@ -367,6 +375,56 @@ exports.getDailyStats = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
+
+exports.getDailyStats = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+
+        const company = await Company.findById(companyId);
+
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        const performance = company.overView.performance;
+        console.log("performance", performance);
+
+        if (!performance || performance.length === 0) {
+            return res.status(404).json({ message: 'No performance data available' });
+        }
+
+        const latestPerformance = performance[0];
+        const historicalData = latestPerformance.details;
+        console.log("historicalData", historicalData);
+
+        if (!historicalData || historicalData.length === 0) {
+            return res.status(404).json({ message: 'No historical data available' });
+        }
+
+        const latestData = historicalData[10];
+        console.log("latestData", latestData);
+
+        const marketCap = company.overView.fundamentals[0]?.marketCap;
+
+        const dailyStats = {
+            DailyOpen: latestData.Open,
+            DailyHigh: Math.max(latestData.Open, latestData.TodayHigh),
+            DailyLow: Math.min(latestData.Open, latestData.TodayLow),
+            DailyClose: latestData.PreviousClose,
+            DailyVolume: latestData.Volume,
+            MarketCap: marketCap,
+        };
+
+        return res.status(200).json({
+            message: 'Daily statistics retrieved successfully',
+            data: dailyStats,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
 
 
 exports.getDailyStatsByDate = async (req, res) => {
@@ -468,6 +526,351 @@ exports.getDailyStatsByDay = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
+
+
+////// third Party code 
+//'0 9 * * *'
+// cron.schedule('* * * * *', async () => {
+//     console.log('Task scheduled at 9:00 AM');
+
+//     function handle_message(channel, message) {
+//         console.log(`message: ${message} - received from channel ${channel} `)
+//     }
+
+//     function subscribe_to_channel(socket, ticker) {
+//         (async () => {
+
+//             const channel_name = `${ticker}`
+//             console.log(`subscribing to channel ${channel_name}`)
+//             let myChannel = socket.subscribe(channel_name);
+
+//             await myChannel.listener('subscribe').once();
+//             (async () => {
+//                 for await (let data of myChannel) {
+//                     handle_message("SUBSCRIPTION-" + channel_name, data)
+//                 }
+//             })();
+//         })();
+//     }
+
+//     function subscribe_to_events(socket, event) {
+//         (async () => {
+//             const channel_name = `${event}`
+//             console.log(`subscribing to Event ${channel_name}`)
+//             try {
+//                 (async () => {
+//                     for await (let data of socket.receiver(event)) {
+//                         handle_message(event, data)
+//                     }
+//                 })();
+//             } catch (error) {
+//                 console.log(json.stringify(error));
+//             }
+//         })();
+//     }
+
+//     function unsubscribe_from_channel(socket, ticker) {
+//         (async () => {
+//             const channel_name = `${ticker}.json`
+//             console.log(`unsubscribing from channel ${channel_name}`)
+//             let myChannel = socket.unsubscribe(channel_name);
+//             console.log(`successfully unsubscribed from channel ${JSON.stringify(channel_name)}`);
+//         })();
+//     }
+
+//     function disconnect_websocket(socket) {
+//         socket.disconnect()
+//         console.log('disconnected the websocket connection.')
+//     }
+
+//     function download_ticker() {
+//         console.log('downloading tickers...');
+//         //var fs = require('fs');
+//         reqEndPoint = "http://qbase1.vbiz.in/directrt/";
+//         url = `http://qbase1.vbiz.in/directrt/gettickers?loginid=${loginId}&product=${product}&accesstoken=${access_token}`;
+//         axios.get(url).then(function (res) {
+//             if (!res.status == 200) {
+//                 console.log('Error occured getting tickers - response status code not 200', res.status)
+//                 return
+//             } else {
+//                 if (res.data.includes('Invalid session. Relogin to continue')) {
+//                     console.log('Error occured downloading tickers[invalid session]: ', res.data)
+//                     return
+//                 }
+//                 if (res.data.includes('Invalid access token')) {
+//                     console.log('Error occured downloading tickers[invalid access token]: ', res.data)
+//                     return
+//                 }
+//             }
+
+//             //save the content (tickers) to file
+//             fs.writeFile('tickers.txt', res.data, function (err) {
+//                 if (err) {
+//                     console.log(`Error writing the downloaded tickers to file: ${err} - no websocket connection will be made.`);
+//                     return
+//                 } else {
+//                     console.log('successfully written the tickers to file.');
+//                 }
+//             });
+//         })
+//     }
+
+//     function read_tickers_from_file() {
+//         fs.readFile('tickers.txt', function (err, data) {
+//             if (err) {
+//                 console.log(`Error reading tickers from file tickers.txt: ${err} - no websocket connection will be made`);
+//                 return
+//             } else {
+//                 console.log('tickers read from file successful');
+//             }
+//             var tickers = data.toString().split(',');
+//         })
+//     }
+
+//     async function main() {
+//         loginId = 'DC-UDAY8511';
+//         product = 'DIRECTRTLITE';
+//         apikey = '4A771C49C9534D8CAD3F';
+
+//         const authEndPoint = `http://s3.vbiz.in/directrt/gettoken?loginid=${loginId}&product=${product}&apikey=${apikey}`
+//         console.log("authEndPoint", authEndPoint);
+//         axios
+//             .get(authEndPoint)
+//             .then(function (res) {
+//                 console.log(`statusCode----: ${res.status}`)
+
+//                 if (res.status == 200) {
+
+//                     console.log("Response : " + JSON.stringify(res.data));
+
+//                     if (res.data.hasOwnProperty('Status') == false) {
+//                         console.log('authentication status not returned in payload. exiting')
+//                         return
+//                     } else {
+//                     }
+
+//                     if (res.data.hasOwnProperty('AccessToken') == false) {
+//                         console.log('access token not returned in payload. exiting')
+//                         return
+//                     }
+
+//                     var max_symbol = res.data['MaxSymbol']
+//                     var access_token = res.data['AccessToken']
+//                     var is_authenticated = res.data['Status']
+//                     if (is_authenticated == false) {
+//                         console.log('authentication NOT successful,exiting')
+//                         return
+//                     }
+//                     console.log('access token: ', access_token)
+//                     console.log('CSV Headerrs: ', res.data["Message"]);
+
+//                     console.log('connecting to websocket...')
+//                     var wsEndPoint = `116.202.165.216:992/directrt/?loginid=${loginId}&accesstoken=${access_token}&product=${product}`
+//                     const socketClusterClient = require('socketcluster-client')
+//                     socket = socketClusterClient.create({
+//                         hostname: wsEndPoint,
+//                         path: '',
+//                         port: 80
+//                     });
+//                     var myInterval = setInterval(function () {
+//                         console.log('websocket connection state: ', socket.state);
+//                         if (socket.state == 'open') {
+//                             console.log('websocket connection is open')
+//                             clearInterval(myInterval);
+//                             let a = 'https:qbase1.vbiz.in/directrt/gethistorical?loginid=DC-UDAY8511&product=DIRECTRTLITE&accesstoken=3409aa91f848445784b42820dbaa4b22&inst=STOCK&tradedate=03JAN2024&expiry=&symbol=INFY'     // ye historical data 
+//                             // subscribe_to_channel(socket, 'NSE_STOCK_INFY.json')   /// live data 
+//                             subscribe_to_channel(socket, 'NSE_FUTIDX_NIFTY_27OCT2022.json')
+
+//                         } else if (socket.state == 'closed') {
+//                             console.log(socket);
+//                             console.log('websocket connection is closed. exiting');
+//                             clearInterval(myInterval);
+//                             // socket.disconnect();
+//                             return
+//                         }
+//                     }, 1000)
+
+//                 } else {
+//                     console.log(`server-side error occurred when getting access token,status code returned was ${res.status}\r\nResponse : ${json.stringify(res)}`);
+//                     return
+//                 }
+//             })
+//             .catch(error => {
+//                 console.error(`Exception occured: ${error}`);
+//                 return
+//             })
+//     }
+//     /* 
+//     call main function, which will authenticate,download tickers and subscribe to the channels(demo mode).
+//     comment out the code that subscribes to channels in main function. the main function will therefore only make the websocket connection only
+//      you can then subscribe to channels you want, by calling the subscribe function above
+//     to unsubscribe from a channel, call the unsubscribe function
+//     to close the websocket connection, call the disconnect function above. 
+//     */
+
+//     var socket
+//     var fs = require('fs');
+//     // const axios = require('axios')
+//     require('dotenv').config()
+
+//     //load credentials from .env file
+//     // loginId = process.env.loginId
+//     // product = process.env.product
+//     // apikey = process.env.apikey
+//     // loginId = 'DC-UDAY8511';
+//     // product = 'DIRECTRTLITE';
+//     // apikey = '4A771C49C9534D8CAD3F';
+
+//     //
+
+//     main()
+// })
+/// end third party code 
+
+
+
+
+//// my function 
+async function savePerformanceData1(loginId, accessToken, inst, product, tradeDate, symbol, companyId) {
+    try {
+        const apiData = await fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol);
+
+        // console.log('API Data:------------------', apiData);
+        const company = await Company.findById(companyId);
+
+        const performanceInstance = {
+            history: apiData.map(item => {
+                const dateTimeString = `${item.Date.slice(0, 4)}-${item.Date.slice(4, 6)}-${item.Date.slice(6)}`;
+                console.log('dateTimeString', dateTimeString);
+
+                const timeString = `${item.Time.slice(0, 2)}:${item.Time.slice(2)}`;
+                console.log('timeString', timeString);
+
+                return {
+                    date: dateTimeString,
+                    time: timeString,
+                    Volume: Number(item.Volume),
+                    PreviousClose: Number(item.Close),
+                    Open: Number(item.Open),
+                    TodayLow: Number(item.Low),
+                    TodayHigh: Number(item.High),
+                };
+            }),
+        };
+
+
+
+        company.overView.performance = performanceInstance;
+
+        await company.save();
+        console.log('Performance data saved successfully.');
+    } catch (error) {
+        console.error('Error saving performance data:', error);
+    }
+}
+
+async function fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol) {
+    const apiUrl = `https://qbase1.vbiz.in/directrt/gethistorical?loginid=${loginId}&product=${product}&accesstoken=${accessToken}&inst=${inst}&tradedate=${tradeDate}&expiry=&symbol=${symbol}`;
+
+    try {
+        const response = await axios.get(apiUrl);
+        const parsedData = parse(response.data, { header: true, skipEmptyLines: true }).data;
+        return parsedData;
+    } catch (error) {
+        console.error('Error fetching data from API:', error);
+        throw error;
+    }
+}
+
+async function savePerformanceData(loginId, accessToken, inst, product, tradeDate, symbol, companyId) {
+    try {
+        const apiData = await fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol);
+
+        const company = await Company.findById(companyId);
+
+        apiData.forEach(item => {
+            const dateTimeString = `${item.Date.slice(0, 4)}-${item.Date.slice(4, 6)}-${item.Date.slice(6)}`;
+            const dateValue = new Date(dateTimeString);
+            const timeString = `${item.Time.slice(0, 2)}:${item.Time.slice(2)}`;
+
+            if (!Array.isArray(company.overView.performance)) {
+                company.overView.performance = [];
+            }
+
+            const existingPerformanceIndex = company.overView.performance.findIndex(performance => performance.date && performance.date.getTime() === dateValue.getTime());
+
+            if (existingPerformanceIndex !== -1) {
+                const existingTimeIndex = company.overView.performance[existingPerformanceIndex].details.findIndex(detail => detail.time === timeString);
+
+                if (existingTimeIndex !== -1) {
+                    company.overView.performance[existingPerformanceIndex].details[existingTimeIndex] = {
+                        time: timeString,
+                        Volume: Number(item.Volume),
+                        PreviousClose: Number(item.Close),
+                        Open: Number(item.Open),
+                        TodayLow: Number(item.Low),
+                        TodayHigh: Number(item.High),
+                    };
+                } else {
+                    company.overView.performance[existingPerformanceIndex].details.push({
+                        time: timeString,
+                        Volume: Number(item.Volume),
+                        PreviousClose: Number(item.Close),
+                        Open: Number(item.Open),
+                        TodayLow: Number(item.Low),
+                        TodayHigh: Number(item.High),
+                    });
+                }
+            } else {
+                company.overView.performance.push({
+                    date: dateValue,
+                    details: [{
+                        time: timeString,
+                        Volume: Number(item.Volume),
+                        PreviousClose: Number(item.Close),
+                        Open: Number(item.Open),
+                        TodayLow: Number(item.Low),
+                        TodayHigh: Number(item.High),
+                    }],
+                });
+            }
+        });
+
+        await company.save();
+        console.log('Performance data saved successfully.');
+    } catch (error) {
+        console.error('Error saving performance data:', error);
+    }
+}
+
+
+const loginId = 'DC-UDAY8511';
+const product = 'DIRECTRTLITE';
+const apikey = '4A771C49C9534D8CAD3F';
+
+axios
+    .get(`http://s3.vbiz.in/directrt/gettoken?loginid=${loginId}&product=${product}&apikey=${apikey}`)
+    .then(async function (res) {
+        console.log(`statusCode: ${res.status}`);
+
+        if (res.status === 200 && res.data.AccessToken) {
+            const accessToken = res.data.AccessToken;
+            console.log('Access Token:', accessToken);
+
+            const inst = 'FUTIDX';
+            const tradeDate = '02JAN2024';
+            const symbol = 'NIFTY';
+            const companyId = '6597cc826f20fc1fe52fc792';
+
+            await savePerformanceData(loginId, accessToken, inst, product, tradeDate, symbol, companyId);
+        } else {
+            console.error('Error getting access token:', res.status, res.data);
+        }
+    })
+    .catch(function (error) {
+        console.error('Error getting access token:', error.message);
+    });
+
 
 
 
