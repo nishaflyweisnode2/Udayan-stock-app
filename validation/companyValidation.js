@@ -3,23 +3,19 @@ const Joi = require('joi');
 
 
 exports.validateCompany = Joi.object({
-    name: Joi.string().required(),
     symbol: Joi.string().required(),
+    inst: Joi.string().required(),
+    exchange: Joi.string().required(),
     description: Joi.string(),
-    industry: Joi.string(),
-    headquarters: Joi.string(),
-    website: Joi.string(),
+    startDate: Joi.string(),
+    endDate: Joi.string(),
     price: Joi.number(),
 });
 
 
 exports.updateValidateCompany = Joi.object({
-    name: Joi.string(),
     symbol: Joi.string(),
     description: Joi.string(),
-    industry: Joi.string(),
-    headquarters: Joi.string(),
-    website: Joi.string(),
     price: Joi.number(),
 });
 

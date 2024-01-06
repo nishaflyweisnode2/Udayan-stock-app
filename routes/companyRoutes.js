@@ -5,7 +5,7 @@ const {
     createCompany,
     getAllCompanies,
     getCompanyById,
-    updateCompanyById,
+    updateCompany,
     deleteCompanyById,
     addNewsToCompany,
     getNewsForCompany,
@@ -33,7 +33,7 @@ const authJwt = require("../middleware/auth");
 router.post('/api/companies', [authJwt.verifyToken], companyImage.single('image'), createCompany);
 router.get('/api/companies', [authJwt.verifyToken], getAllCompanies);
 router.get('/api/companies/:id', [authJwt.verifyToken], getCompanyById);
-router.put('/api/companies/:id', [authJwt.verifyToken], companyImage.single('image'), updateCompanyById);
+router.put('/api/companies/:id', [authJwt.verifyToken], companyImage.single('image'), updateCompany);
 router.delete('/api/companies/:id', [authJwt.verifyToken], deleteCompanyById);
 
 

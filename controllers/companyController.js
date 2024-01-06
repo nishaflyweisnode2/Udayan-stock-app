@@ -9,7 +9,7 @@ const { validateCompany, updateValidateCompany, performanceValidation, createFun
 
 
 
-exports.createCompany = async (req, res) => {
+exports.createCompany1 = async (req, res) => {
     try {
         const { error } = validateCompany.validate(req.body);
         if (error) {
@@ -18,21 +18,19 @@ exports.createCompany = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: "Image file is required" });
         }
-        const { name, symbol, description, industry, headquarters, website, price } = req.body;
+        const { symbol, description, inst, exchange, price } = req.body;
 
-        const existingCompany = await Company.findOne({ $or: [{ name }, { symbol }] });
+        const existingCompany = await Company.findOne({ $or: [{ inst }, { symbol }] });
 
         if (existingCompany) {
-            return res.status(400).json({ status: 400, error: 'Company name or symbol already exists' });
+            return res.status(400).json({ status: 400, error: 'Company inst or symbol already exists' });
         }
 
         const company = new Company({
-            name,
             symbol,
             description,
-            industry,
-            headquarters,
-            website,
+            inst,
+            exchange,
             price,
             image: req.file.path,
         });
@@ -43,11 +41,181 @@ exports.createCompany = async (req, res) => {
     }
 };
 
+function convertDateFormat(inputDate) {
+    const matchResult = inputDate.match(/(\d{2})-(\d{2})-(\d{4})/);
+
+    if (!matchResult) {
+        console.error('Invalid date format:', inputDate);
+        return inputDate;
+    }
+
+    const [day, month, year] = matchResult.slice(1);
+    const months = {
+        '01': 'JAN', '02': 'FEB', '03': 'MAR', '04': 'APR', '05': 'MAY', '06': 'JUN',
+        '07': 'JUL', '08': 'AUG', '09': 'SEP', '10': 'OCT', '11': 'NOV', '12': 'DEC'
+    };
+
+    return `${day}${months[month]}${year}`;
+}
+async function createAccessToken() {
+    const loginId = 'DC-UDAY8511';
+    const product = 'DIRECTRTLITE';
+    const apikey = '4A771C49C9534D8CAD3F';
+
+    try {
+        const response = await axios.get(`http://s3.vbiz.in/directrt/gettoken?loginid=${loginId}&product=${product}&apikey=${apikey}`);
+        console.log(`statusCode: ${response.status}`);
+
+        if (response.status === 200 && response.data.AccessToken) {
+            console.log('Access Token created successfully:', response.data.AccessToken);
+            return response.data.AccessToken;
+        } else {
+            console.error('Error getting access token:', response.status, response.data);
+            throw new Error('Error getting access token');
+        }
+    } catch (error) {
+        console.error('Error getting access token:', error.message);
+        throw error;
+    }
+}
+async function fetchDataFromApi(params) {
+    const { loginId, accessToken, product, inst, tradeDate, symbol } = params;
+    console.log("----", params);
+    const apiUrl = `https://qbase1.vbiz.in/directrt/gethistorical?loginid=${loginId}&product=${product}&accesstoken=${accessToken}&inst=${inst}&tradedate=${tradeDate}&expiry=&symbol=${symbol}`;
+
+    try {
+        const response = await axios.get(apiUrl);
+        const parsedData = parse(response.data, { header: true, skipEmptyLines: true }).data;
+        return parsedData;
+    } catch (error) {
+        console.error('Error fetching data from API:', error);
+        throw error;
+    }
+}
+async function savePerformanceData(params, apiData) {
+    try {
+        const { loginId, accessToken, inst, product, tradeDate, symbol, companyId } = params;
+
+        let company = await Company.findById(companyId);
+        console.log('Company found:', companyId);
+
+        if (!company) {
+            console.error('Company not found:', companyId);
+            return;
+        }
+
+        apiData.forEach(item => {
+            const dateTimeString = `${item.Date.slice(0, 4)}-${item.Date.slice(4, 6)}-${item.Date.slice(6)}`;
+            const dateValue = new Date(dateTimeString);
+            const timeString = `${item.Time.slice(0, 2)}:${item.Time.slice(2)}`;
+
+            if (!Array.isArray(company.overView.performance)) {
+                company.overView.performance = [];
+            }
+
+            const existingPerformanceIndex = company.overView.performance.findIndex(performance => performance.date && performance.date.getTime() === dateValue.getTime());
+
+            if (existingPerformanceIndex !== -1) {
+                const existingTimeIndex = company.overView.performance[existingPerformanceIndex].details.findIndex(detail => detail.time === timeString);
+
+                if (existingTimeIndex !== -1) {
+                    company.overView.performance[existingPerformanceIndex].details[existingTimeIndex] = {
+                        time: timeString,
+                        Volume: Number(item.Volume),
+                        PreviousClose: Number(item.Close),
+                        Open: Number(item.Open),
+                        TodayLow: Number(item.Low),
+                        TodayHigh: Number(item.High),
+                    };
+                } else {
+                    company.overView.performance[existingPerformanceIndex].details.push({
+                        time: timeString,
+                        Volume: Number(item.Volume),
+                        PreviousClose: Number(item.Close),
+                        Open: Number(item.Open),
+                        TodayLow: Number(item.Low),
+                        TodayHigh: Number(item.High),
+                    });
+                }
+            } else {
+                company.overView.performance.push({
+                    date: dateValue,
+                    details: [{
+                        time: timeString,
+                        Volume: Number(item.Volume),
+                        PreviousClose: Number(item.Close),
+                        Open: Number(item.Open),
+                        TodayLow: Number(item.Low),
+                        TodayHigh: Number(item.High),
+                    }],
+                });
+            }
+        });
+
+        await company.save();
+        console.log('Performance data saved successfully.');
+    } catch (error) {
+        console.error('Error saving performance data:', error);
+    }
+}
+
+exports.createCompany = async (req, res) => {
+    try {
+        const { error } = validateCompany.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: "Image file is required" });
+        }
+
+        const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
+        const formattedStartDate = convertDateFormat(startDate);
+        console.log("formattedStartDate", formattedStartDate);
+        const company = new Company({
+            symbol,
+            description,
+            inst,
+            exchange,
+            price,
+            startDate: formattedStartDate,
+            endDate,
+            image: req.file.path,
+        });
+
+        await company.save();
+
+        const companyId = company._id;
+
+        // Create access token
+        const accessToken = await createAccessToken();
+        console.log("accessToken", accessToken);
+        const performanceParams = {
+            loginId: 'DC-UDAY8511',
+            accessToken,
+            inst,
+            product: 'DIRECTRTLITE',
+            tradeDate: formattedStartDate,
+            symbol,
+            companyId,
+        };
+
+        const apiData = await fetchDataFromApi(performanceParams);
+
+        await savePerformanceData(performanceParams, apiData);
+
+        return res.status(201).json({ status: 201, message: "Company created successfully", data: company });
+    } catch (error) {
+        console.error('Error creating company:', error.message);
+        return res.status(500).json({ error: 'Server error', details: error.message });
+    }
+};
+
 
 exports.getAllCompanies = async (req, res) => {
     try {
         const companies = await Company.find();
-        res.status(200).json({ status: 200, message: "Get All Company Sucessfully", data: company });
+        res.status(200).json({ status: 200, message: "Get All Company Sucessfully", data: companies });
     } catch (error) {
         res.status(500).json({ error: 'Server error', details: error.message });
     }
@@ -67,14 +235,14 @@ exports.getCompanyById = async (req, res) => {
 };
 
 
-exports.updateCompanyById = async (req, res) => {
+exports.updateCompanyById1 = async (req, res) => {
     try {
         const { error } = updateValidateCompany.validate(req.body);
         if (error) {
             return res.status(400).json({ error: error.details[0].message });
         }
 
-        const { name, symbol, description, industry, headquarters, website, price } = req.body;
+        const { symbol, description, exchange, inst, price } = req.body;
 
         const companyId = req.params.id;
 
@@ -84,10 +252,10 @@ exports.updateCompanyById = async (req, res) => {
             return res.status(404).json({ error: 'Company not found' });
         }
 
-        if (name && name !== company.name) {
-            const existingCompanyByName = await Company.findOne({ name });
+        if (inst && inst !== company.inst) {
+            const existingCompanyByName = await Company.findOne({ inst });
             if (existingCompanyByName) {
-                return res.status(400).json({ status: 400, error: 'Company name already exists' });
+                return res.status(400).json({ status: 400, error: 'Company inst already exists' });
             }
         }
 
@@ -98,12 +266,10 @@ exports.updateCompanyById = async (req, res) => {
             }
         }
 
-        company.name = name;
         company.symbol = symbol;
         company.description = description;
-        company.industry = industry;
-        company.headquarters = headquarters;
-        company.website = website;
+        company.exchange = exchange;
+        company.inst = inst;
         company.price = price;
         company.image = req.file.path;
 
@@ -112,6 +278,55 @@ exports.updateCompanyById = async (req, res) => {
         res.status(200).json({ status: 200, message: "Company Updated Successfully", data: updatedCompany });
     } catch (error) {
         res.status(500).json({ error: 'Server error', details: error.message });
+    }
+};
+
+
+exports.updateCompany = async (req, res) => {
+    try {
+        const companyId = req.params.id;
+        const existingCompany = await Company.findById(companyId);
+
+        if (!existingCompany) {
+            return res.status(404).json({ error: 'Company not found' });
+        }
+
+        const { error } = validateCompany.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
+        const formattedStartDate = convertDateFormat(startDate);
+        existingCompany.inst = inst;
+        existingCompany.symbol = symbol;
+        existingCompany.description = description;
+        existingCompany.exchange = exchange;
+        existingCompany.price = price;
+        existingCompany.startDate = formattedStartDate;
+        existingCompany.endDate = endDate;
+
+        await existingCompany.save();
+
+        const accessToken = await createAccessToken();
+        const performanceParams = {
+            loginId: 'DC-UDAY8511',
+            accessToken,
+            inst,
+            product: 'DIRECTRTLITE',
+            tradeDate: formattedStartDate,
+            symbol,
+            companyId,
+        };
+
+        const updatedApiData = await fetchDataFromApi(performanceParams);
+
+        await savePerformanceData(performanceParams, updatedApiData);
+
+        return res.status(200).json({ status: 200, message: "Company updated successfully", data: existingCompany });
+    } catch (error) {
+        console.error('Error updating company:', error.message);
+        return res.status(500).json({ error: 'Server error', details: error.message });
     }
 };
 
@@ -769,20 +984,20 @@ async function savePerformanceData1(loginId, accessToken, inst, product, tradeDa
     }
 }
 
-async function fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol) {
-    const apiUrl = `https://qbase1.vbiz.in/directrt/gethistorical?loginid=${loginId}&product=${product}&accesstoken=${accessToken}&inst=${inst}&tradedate=${tradeDate}&expiry=&symbol=${symbol}`;
+// async function fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol) {
+//     const apiUrl = `https://qbase1.vbiz.in/directrt/gethistorical?loginid=${loginId}&product=${product}&accesstoken=${accessToken}&inst=${inst}&tradedate=${tradeDate}&expiry=&symbol=${symbol}`;
 
-    try {
-        const response = await axios.get(apiUrl);
-        const parsedData = parse(response.data, { header: true, skipEmptyLines: true }).data;
-        return parsedData;
-    } catch (error) {
-        console.error('Error fetching data from API:', error);
-        throw error;
-    }
-}
+//     try {
+//         const response = await axios.get(apiUrl);
+//         const parsedData = parse(response.data, { header: true, skipEmptyLines: true }).data;
+//         return parsedData;
+//     } catch (error) {
+//         console.error('Error fetching data from API:', error);
+//         throw error;
+//     }
+// }
 
-async function savePerformanceData(loginId, accessToken, inst, product, tradeDate, symbol, companyId) {
+async function savePerformanceData2(loginId, accessToken, inst, product, tradeDate, symbol, companyId) {
     try {
         const apiData = await fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol);
 
@@ -843,34 +1058,103 @@ async function savePerformanceData(loginId, accessToken, inst, product, tradeDat
     }
 }
 
+// async function savePerformanceData(loginId, accessToken, inst, product, tradeDate, symbol, companyId) {
+//     try {
+//         const apiData = await fetchDataFromApi(loginId, accessToken, product, inst, tradeDate, symbol);
 
-const loginId = 'DC-UDAY8511';
-const product = 'DIRECTRTLITE';
-const apikey = '4A771C49C9534D8CAD3F';
+//         let company = await Company.findById(companyId);
+//         console.log('Company found:', companyId);
 
-axios
-    .get(`http://s3.vbiz.in/directrt/gettoken?loginid=${loginId}&product=${product}&apikey=${apikey}`)
-    .then(async function (res) {
-        console.log(`statusCode: ${res.status}`);
+//         if (!company) {
+//             console.error('Company not found:', companyId);
+//             return;
+//         }
 
-        if (res.status === 200 && res.data.AccessToken) {
-            const accessToken = res.data.AccessToken;
-            console.log('Access Token:', accessToken);
+//         apiData.forEach(item => {
+//             const dateTimeString = `${item.Date.slice(0, 4)}-${item.Date.slice(4, 6)}-${item.Date.slice(6)}`;
+//             const dateValue = new Date(dateTimeString);
+//             const timeString = `${item.Time.slice(0, 2)}:${item.Time.slice(2)}`;
 
-            const inst = 'FUTIDX';
-            const tradeDate = '02JAN2024';
-            const symbol = 'NIFTY';
-            const companyId = '6597cc826f20fc1fe52fc792';
+//             if (!Array.isArray(company.overView.performance)) {
+//                 company.overView.performance = [];
+//             }
 
-            await savePerformanceData(loginId, accessToken, inst, product, tradeDate, symbol, companyId);
-        } else {
-            console.error('Error getting access token:', res.status, res.data);
-        }
-    })
-    .catch(function (error) {
-        console.error('Error getting access token:', error.message);
-    });
+//             const existingPerformanceIndex = company.overView.performance.findIndex(performance => performance.date && performance.date.getTime() === dateValue.getTime());
 
+//             if (existingPerformanceIndex !== -1) {
+//                 const existingTimeIndex = company.overView.performance[existingPerformanceIndex].details.findIndex(detail => detail.time === timeString);
+
+//                 if (existingTimeIndex !== -1) {
+//                     company.overView.performance[existingPerformanceIndex].details[existingTimeIndex] = {
+//                         time: timeString,
+//                         Volume: Number(item.Volume),
+//                         PreviousClose: Number(item.Close),
+//                         Open: Number(item.Open),
+//                         TodayLow: Number(item.Low),
+//                         TodayHigh: Number(item.High),
+//                     };
+//                 } else {
+//                     company.overView.performance[existingPerformanceIndex].details.push({
+//                         time: timeString,
+//                         Volume: Number(item.Volume),
+//                         PreviousClose: Number(item.Close),
+//                         Open: Number(item.Open),
+//                         TodayLow: Number(item.Low),
+//                         TodayHigh: Number(item.High),
+//                     });
+//                 }
+//             } else {
+//                 company.overView.performance.push({
+//                     date: dateValue,
+//                     details: [{
+//                         time: timeString,
+//                         Volume: Number(item.Volume),
+//                         PreviousClose: Number(item.Close),
+//                         Open: Number(item.Open),
+//                         TodayLow: Number(item.Low),
+//                         TodayHigh: Number(item.High),
+//                     }],
+//                 });
+//             }
+//         });
+
+//         await company.save();
+//         console.log('Performance data saved successfully.');
+//     } catch (error) {
+//         console.error('Error saving performance data:', error);
+//     }
+// }
+
+
+
+// const loginId = 'DC-UDAY8511';
+// const product = 'DIRECTRTLITE';
+// const apikey = '4A771C49C9534D8CAD3F';
+
+// axios
+//     .get(`http://s3.vbiz.in/directrt/gettoken?loginid=${loginId}&product=${product}&apikey=${apikey}`)
+//     .then(async function (res) {
+//         console.log(`statusCode: ${res.status}`);
+
+//         if (res.status === 200 && res.data.AccessToken) {
+//             const accessToken = res.data.AccessToken;
+//             console.log("Response : " + JSON.stringify(res.data));
+
+//             console.log('Access Token:', accessToken);
+
+//             const inst = 'FUTIDX';
+//             const tradeDate = '02JAN2024';
+//             const symbol = 'NIFTY';
+//             const companyId = companyId;
+
+//             await savePerformanceData(loginId, accessToken, inst, product, tradeDate, symbol, companyId);
+//         } else {
+//             console.error('Error getting access token:', res.status, res.data);
+//         }
+//     })
+//     .catch(function (error) {
+//         console.error('Error getting access token:', error.message);
+//     });
 
 
 

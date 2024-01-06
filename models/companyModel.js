@@ -90,35 +90,41 @@ const eventSchema = new mongoose.Schema({
 
 
 const companySchema = new mongoose.Schema({
-    name: {
-        type: String,
-        unique: true,
-    },
     image: {
         type: String,
     },
     symbol: {
         type: String,
-        unique: true,
     },
     description: {
-        type: String,
-    },
-    industry: {
-        type: String,
-    },
-    headquarters: {
-        type: String,
-    },
-    website: {
         type: String,
     },
     price: {
         type: Number,
     },
+    exchange: {
+        type: String,
+        enum: ['NSE', 'BSE'],
+    },
+    inst: {
+        type: String,
+        enum: ['STOCK', 'INDICES'],
+    },
+    startDate: {
+        type: String,
+    },
+    endDate: {
+        type: String,
+    },
     overView: {
-        performance: [performanceSchema],
-        fundamentals: [fundamentalsSchema],
+        performance: {
+            type: [performanceSchema],
+            default: null,
+        },
+        fundamentals: {
+            type: [fundamentalsSchema],
+            default: null,
+        },
     },
     news: [newsSchema],
     events: [eventSchema],
