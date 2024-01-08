@@ -52,7 +52,7 @@ router.get('/api/:companyId/events', [authJwt.verifyToken], getCompanyEvents);
 
 
 // Create performance record for a specific company
-router.post('/api/:companyId/performance', [authJwt.verifyToken], performanceValidation, createPerformance);
+router.post('/api/:id/performance', [authJwt.verifyToken], /*performanceValidation,*/ createPerformance);
 router.get('/api/companies/:companyId/performance', [authJwt.verifyToken], getPerformanceByCompanyId);
 
 

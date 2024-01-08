@@ -57,6 +57,30 @@ function convertDateFormat(inputDate) {
 
     return `${day}${months[month]}${year}`;
 }
+function convertDateFormat1(inputDate) {
+    try {
+        const dateObject = new Date(inputDate);
+        if (isNaN(dateObject.getTime())) {
+            console.error('Invalid date format:', inputDate);
+            return inputDate;
+        }
+
+        const day = String(dateObject.getDate()).padStart(2, '0');
+        const month = String(dateObject.getMonth() + 1).padStart(2, '0');
+        const year = dateObject.getFullYear();
+
+        const months = {
+            '01': 'JAN', '02': 'FEB', '03': 'MAR', '04': 'APR', '05': 'MAY', '06': 'JUN',
+            '07': 'JUL', '08': 'AUG', '09': 'SEP', '10': 'OCT', '11': 'NOV', '12': 'DEC'
+        };
+
+        return `${day}${months[month]}${year}`;
+    } catch (error) {
+        console.error('Error converting date format:', error);
+        return inputDate;
+    }
+}
+
 async function createAccessToken() {
     const loginId = 'DC-UDAY8511';
     const product = 'DIRECTRTLITE';
@@ -82,7 +106,7 @@ async function fetchDataFromApi(params) {
     const { loginId, accessToken, product, inst, tradeDate, symbol } = params;
     console.log("----", params);
     const apiUrl = `https://qbase1.vbiz.in/directrt/gethistorical?loginid=${loginId}&product=${product}&accesstoken=${accessToken}&inst=${inst}&tradedate=${tradeDate}&expiry=&symbol=${symbol}`;
-
+    console.log("******", apiUrl);
     try {
         const response = await axios.get(apiUrl);
         const parsedData = parse(response.data, { header: true, skipEmptyLines: true }).data;
@@ -159,7 +183,7 @@ async function savePerformanceData(params, apiData) {
     }
 }
 
-exports.createCompany = async (req, res) => {
+exports.createCompany1 = async (req, res) => {
     try {
         const { error } = validateCompany.validate(req.body);
         if (error) {
@@ -171,7 +195,9 @@ exports.createCompany = async (req, res) => {
 
         const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
         const formattedStartDate = convertDateFormat(startDate);
+        const formattedEndDate = convertDateFormat(endDate);
         console.log("formattedStartDate", formattedStartDate);
+        console.log("formattedEndDate", formattedEndDate);
         const company = new Company({
             symbol,
             description,
@@ -179,7 +205,7 @@ exports.createCompany = async (req, res) => {
             exchange,
             price,
             startDate: formattedStartDate,
-            endDate,
+            endDate: formattedEndDate,
             image: req.file.path,
         });
 
@@ -203,6 +229,77 @@ exports.createCompany = async (req, res) => {
         const apiData = await fetchDataFromApi(performanceParams);
 
         await savePerformanceData(performanceParams, apiData);
+
+        return res.status(201).json({ status: 201, message: "Company created successfully", data: company });
+    } catch (error) {
+        console.error('Error creating company:', error.message);
+        return res.status(500).json({ error: 'Server error', details: error.message });
+    }
+};
+
+exports.createCompany = async (req, res) => {
+    try {
+        const { error } = validateCompany.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: "Image file is required" });
+        }
+
+        const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
+        const formattedStartDate = convertDateFormat(startDate);
+        const formattedEndDate = convertDateFormat(endDate);
+        console.log("formattedStartDate", formattedStartDate);
+        console.log("formattedEndDate", formattedEndDate);
+
+        const company = new Company({
+            symbol,
+            description,
+            inst,
+            exchange,
+            price,
+            startDate: formattedStartDate,
+            endDate: formattedEndDate,
+            image: req.file.path,
+        });
+
+        await company.save();
+
+        const companyId = company._id;
+
+        const accessToken = await createAccessToken();
+        console.log("accessToken", accessToken);
+
+        for (let currentDate = new Date(formattedStartDate); currentDate <= new Date(formattedEndDate); currentDate.setDate(currentDate.getDate() + 1)) {
+            const formattedCurrentDate = convertDateFormat(currentDate.toISOString().slice(0, 10));
+            console.log("formattedCurrentDate", formattedCurrentDate);
+
+            const tradeDateForApi = convertDateFormat1(currentDate);
+            console.log("tradeDateForApi", tradeDateForApi);
+
+            if (currentDate > new Date(formattedEndDate)) {
+                break;
+            }
+
+            const performanceParams = {
+                loginId: 'DC-UDAY8511',
+                accessToken,
+                inst,
+                product: 'DIRECTRTLITE',
+                tradeDate: tradeDateForApi,
+                symbol,
+                companyId,
+            };
+
+            try {
+                const apiData = await fetchDataFromApi(performanceParams);
+                await savePerformanceData(performanceParams, apiData);
+                console.log(`Performance data for ${formattedCurrentDate} processed successfully.`);
+            } catch (error) {
+                console.error(`Error processing performance data for ${formattedCurrentDate}:`, error);
+            }
+        }
 
         return res.status(201).json({ status: 201, message: "Company created successfully", data: company });
     } catch (error) {
@@ -282,7 +379,7 @@ exports.updateCompanyById1 = async (req, res) => {
 };
 
 
-exports.updateCompany = async (req, res) => {
+exports.updateCompany1 = async (req, res) => {
     try {
         const companyId = req.params.id;
         const existingCompany = await Company.findById(companyId);
@@ -298,13 +395,17 @@ exports.updateCompany = async (req, res) => {
 
         const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
         const formattedStartDate = convertDateFormat(startDate);
+        const formattedEndDate = convertDateFormat(endDate);
+        console.log("formattedStartDate", formattedStartDate);
+        console.log("formattedEndDate", formattedEndDate);
+
         existingCompany.inst = inst;
         existingCompany.symbol = symbol;
         existingCompany.description = description;
         existingCompany.exchange = exchange;
         existingCompany.price = price;
         existingCompany.startDate = formattedStartDate;
-        existingCompany.endDate = endDate;
+        existingCompany.endDate = formattedEndDate;
 
         await existingCompany.save();
 
@@ -322,6 +423,75 @@ exports.updateCompany = async (req, res) => {
         const updatedApiData = await fetchDataFromApi(performanceParams);
 
         await savePerformanceData(performanceParams, updatedApiData);
+
+        return res.status(200).json({ status: 200, message: "Company updated successfully", data: existingCompany });
+    } catch (error) {
+        console.error('Error updating company:', error.message);
+        return res.status(500).json({ error: 'Server error', details: error.message });
+    }
+};
+
+
+exports.updateCompany = async (req, res) => {
+    try {
+        const companyId = req.params.id;
+        const existingCompany = await Company.findById(companyId);
+
+        if (!existingCompany) {
+            return res.status(404).json({ error: 'Company not found' });
+        }
+
+        const { error } = validateCompany.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
+        const formattedStartDate = convertDateFormat(startDate);
+        const formattedEndDate = convertDateFormat(endDate);
+
+        existingCompany.inst = inst;
+        existingCompany.symbol = symbol;
+        existingCompany.description = description;
+        existingCompany.exchange = exchange;
+        existingCompany.price = price;
+        existingCompany.startDate = formattedStartDate;
+        existingCompany.endDate = formattedEndDate;
+
+        await existingCompany.save();
+
+        const accessToken = await createAccessToken();
+        console.log("accessToken", accessToken);
+
+        for (let currentDate = new Date(formattedStartDate); currentDate <= new Date(formattedEndDate); currentDate.setDate(currentDate.getDate() + 1)) {
+            const formattedCurrentDate = convertDateFormat(currentDate.toISOString().slice(0, 10));
+            console.log("formattedCurrentDate", formattedCurrentDate);
+
+            const tradeDateForApi = convertDateFormat1(currentDate);
+            console.log("tradeDateForApi", tradeDateForApi);
+
+            if (currentDate > new Date(formattedEndDate)) {
+                break;
+            }
+
+            const performanceParams = {
+                loginId: 'DC-UDAY8511',
+                accessToken,
+                inst,
+                product: 'DIRECTRTLITE',
+                tradeDate: tradeDateForApi,
+                symbol,
+                companyId,
+            };
+
+            try {
+                const apiData = await fetchDataFromApi(performanceParams);
+                await savePerformanceData(performanceParams, apiData);
+                console.log(`Performance data for ${formattedCurrentDate} processed successfully.`);
+            } catch (error) {
+                console.error(`Error processing performance data for ${formattedCurrentDate}:`, error);
+            }
+        }
 
         return res.status(200).json({ status: 200, message: "Company updated successfully", data: existingCompany });
     } catch (error) {
@@ -429,7 +599,7 @@ exports.getCompanyEvents = async (req, res) => {
 };
 
 
-exports.createPerformance = async (req, res) => {
+exports.createPerformance1 = async (req, res) => {
     try {
         const companyId = req.params.companyId;
         const { date, Volume, PreviousClose, Open, TodayLow, TodayHigh } = req.body;
@@ -471,6 +641,68 @@ exports.createPerformance = async (req, res) => {
         await company.save();
 
         return res.status(201).json({ status: 201, message: 'Performance data added or updated successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
+
+exports.createPerformance = async (req, res) => {
+    try {
+        const companyId = req.params.id;
+        const existingCompany = await Company.findById(companyId);
+
+        if (!existingCompany) {
+            return res.status(404).json({ error: 'Company not found' });
+        }
+
+        const { inst, symbol, description, exchange, price, startDate, endDate } = req.body;
+        const formattedStartDate = convertDateFormat(startDate);
+        const formattedEndDate = convertDateFormat(endDate);
+        existingCompany.inst = inst;
+        existingCompany.symbol = symbol;
+        existingCompany.description = description;
+        existingCompany.exchange = exchange;
+        existingCompany.price = price;
+        existingCompany.startDate = formattedStartDate;
+        existingCompany.endDate = formattedEndDate;
+
+        await existingCompany.save();
+
+        const accessToken = await createAccessToken();
+
+        for (let currentDate = new Date(formattedStartDate); currentDate <= new Date(formattedEndDate); currentDate.setDate(currentDate.getDate() + 1)) {
+            const formattedCurrentDate = convertDateFormat(currentDate.toISOString().slice(0, 10));
+            console.log("formattedCurrentDate", formattedCurrentDate);
+
+            const tradeDateForApi = convertDateFormat1(currentDate);
+            console.log("tradeDateForApi", tradeDateForApi);
+
+            if (currentDate > new Date(formattedEndDate)) {
+                break;
+            }
+
+            const performanceParams = {
+                loginId: 'DC-UDAY8511',
+                accessToken,
+                inst,
+                product: 'DIRECTRTLITE',
+                tradeDate: tradeDateForApi,
+                symbol,
+                companyId,
+            };
+
+            try {
+                const apiData = await fetchDataFromApi(performanceParams);
+                await savePerformanceData(performanceParams, apiData);
+                console.log(`Performance data for ${formattedCurrentDate} processed successfully.`);
+            } catch (error) {
+                console.error(`Error processing performance data for ${formattedCurrentDate}:`, error);
+            }
+        }
+
+        return res.status(201).json({ status: 201, message: 'Performance data added or updated successfully', data: existingCompany });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Internal server error', details: error.message });
@@ -547,50 +779,6 @@ exports.getFundamentalsByCompanyId = async (req, res) => {
 };
 
 
-exports.getDailyStats1 = async (req, res) => {
-    try {
-        const companyId = req.params.companyId;
-
-        const company = await Company.findById(companyId);
-
-        if (!company) {
-            return res.status(404).json({ message: 'Company not found' });
-        }
-
-        const performance = company.overView.performance;
-        console.log("performance", performance);
-
-        const historicalData = performance.history;
-        console.log("historicalData", historicalData);
-
-        if (!historicalData || historicalData.length === 0) {
-            return res.status(404).json({ message: 'No historical data available' });
-        }
-
-        const latestData = historicalData[0];
-        console.log("latestData", latestData);
-
-        const marketCap = company.overView.fundamentals[0]?.marketCap;
-
-        const dailyStats = {
-            DailyOpen: latestData.Open,
-            DailyHigh: Math.max(latestData.Open, latestData.TodayHigh),
-            DailyLow: Math.min(latestData.Open, latestData.TodayLow),
-            DailyClose: latestData.PreviousClose,
-            DailyVolume: latestData.Volume,
-            MarketCap: marketCap,
-        };
-
-        return res.status(200).json({
-            message: 'Daily statistics retrieved successfully',
-            data: dailyStats,
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal server error', details: error.message });
-    }
-};
-
 exports.getDailyStats = async (req, res) => {
     try {
         const companyId = req.params.companyId;
@@ -630,6 +818,10 @@ exports.getDailyStats = async (req, res) => {
             MarketCap: marketCap,
         };
 
+        // return res.status(200).json({
+        //     message: 'Historical data retrieved successfully',
+        //     data: historicalData,
+        // });
         return res.status(200).json({
             message: 'Daily statistics retrieved successfully',
             data: dailyStats,
@@ -639,7 +831,6 @@ exports.getDailyStats = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
-
 
 
 exports.getDailyStatsByDate = async (req, res) => {
@@ -658,30 +849,26 @@ exports.getDailyStatsByDate = async (req, res) => {
         }
 
         const performance = company.overView.performance;
-        const historicalData = performance.history;
 
-        if (!historicalData || historicalData.length === 0) {
-            return res.status(404).json({ message: 'No historical data available' });
+        if (!performance || performance.length === 0) {
+            return res.status(404).json({ message: 'No performance data available' });
         }
 
-        const dataForDate = historicalData.find(entry => entry.date.getTime() === dateParam.getTime());
+        const dataForDate = performance.find(entry => entry.date.getTime() === dateParam.getTime());
 
         if (!dataForDate) {
-            return res.status(404).json({ message: 'Data for the specified date not found' });
+            return res.status(404).json({ message: 'Performance data for the specified date not found' });
         }
 
-        const dailyStats = {
-            DailyOpen: dataForDate.Open,
-            DailyHigh: Math.max(dataForDate.Open, dataForDate.TodayHigh),
-            DailyLow: Math.min(dataForDate.Open, dataForDate.TodayLow),
-            DailyClose: dataForDate.PreviousClose,
-            DailyVolume: dataForDate.Volume,
-            MarketCap: company.overView.fundamentals[0]?.marketCap,
-        };
+        const historicalDataForDate = dataForDate.details;
+
+        if (!historicalDataForDate || historicalDataForDate.length === 0) {
+            return res.status(404).json({ message: 'No historical data available for the specified date' });
+        }
 
         return res.status(200).json({
-            message: 'Daily statistics retrieved successfully',
-            data: dailyStats,
+            message: 'Historical data retrieved successfully',
+            data: historicalDataForDate,
         });
     } catch (error) {
         console.error(error);
@@ -706,41 +893,52 @@ exports.getDailyStatsByDay = async (req, res) => {
         }
 
         const performance = company.overView.performance;
-        const historicalData = performance.history;
 
-        if (!historicalData || historicalData.length === 0) {
-            return res.status(404).json({ message: 'No historical data available' });
+        if (!performance || !Array.isArray(performance) || performance.length === 0) {
+            return res.status(404).json({ message: 'No performance data available' });
         }
 
         const currentDate = new Date();
         const currentYear = currentDate.getFullYear();
-        const dataForDate = historicalData.find(entry => {
+        console.log("currentDate", currentDate);
+        console.log("currentYear", currentYear);
+        const dataForDate = performance.find(entry => {
             const entryDate = new Date(entry.date);
-            return entryDate.getDate() === day && entryDate.getFullYear() === currentYear;
+            console.log("entryDate", entryDate);
+
+            const entryDay = entryDate.getDate();
+            console.log("entryDay", entryDay);
+
+            const entryMonth = entryDate.getMonth();
+            console.log("entryMonth", entryMonth);
+
+            const entryYear = entryDate.getFullYear();
+            console.log("entryYear", entryYear);
+
+
+            return entryDay === day && entryMonth + 1 === currentDate.getMonth() + 1 && entryYear === currentYear;
         });
 
         if (!dataForDate) {
             return res.status(404).json({ message: 'Data for the specified date not found' });
         }
 
-        const dailyStats = {
-            DailyOpen: dataForDate.Open,
-            DailyHigh: Math.max(dataForDate.Open, dataForDate.TodayHigh),
-            DailyLow: Math.min(dataForDate.Open, dataForDate.TodayLow),
-            DailyClose: dataForDate.PreviousClose,
-            DailyVolume: dataForDate.Volume,
-            MarketCap: company.overView.fundamentals[0]?.marketCap,
-        };
+        const historicalDataForDate = dataForDate.details;
+        console.log("historicalDataForDate", historicalDataForDate);
+        if (!historicalDataForDate || historicalDataForDate.length === 0) {
+            return res.status(404).json({ message: 'No historical data available for the specified date' });
+        }
 
         return res.status(200).json({
             message: 'Daily statistics retrieved successfully',
-            data: dailyStats,
+            data: historicalDataForDate,
         });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
+
 
 
 ////// third Party code 
