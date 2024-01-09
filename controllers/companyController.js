@@ -1,7 +1,10 @@
 const Company = require('../models/companyModel');
+const LiveData = require('../models/liveDataModel');
 const axios = require('axios');
 const { parse } = require('papaparse');
 const cron = require('node-cron');
+const schedule = require('node-schedule');
+const { subYears, format, startOfDay, eachDayOfInterval } = require('date-fns');
 
 
 const { validateCompany, updateValidateCompany, performanceValidation, createFundamentalsSchema } = require('../validation/companyValidation');
@@ -80,7 +83,6 @@ function convertDateFormat1(inputDate) {
         return inputDate;
     }
 }
-
 async function createAccessToken() {
     const loginId = 'DC-UDAY8511';
     const product = 'DIRECTRTLITE';
@@ -308,6 +310,57 @@ exports.createCompany = async (req, res) => {
     }
 };
 
+// Function for start automatic cron job 
+// const job = schedule.scheduleJob('0 3 * * *', async () => {
+// const job = schedule.scheduleJob('* * * * *', async () => {
+const job = schedule.scheduleJob('0 22 * * *', async () => {
+    try {
+        console.log("Function In Cron Job Started");
+
+        const companies = await Company.find();
+
+        const today = startOfDay(new Date());
+
+        const lastYearStartDate = subYears(today, 1);
+
+        const dateRange = eachDayOfInterval({ start: lastYearStartDate, end: today });
+
+        for (const company of companies) {
+            const accessToken = await createAccessToken();
+            console.log("accessToken", accessToken);
+
+            const datesToFetch = dateRange.filter(date => {
+                const dateString = format(date, 'ddMMMyyyy').toUpperCase();
+                return !company.overView.performance.some(performance => performance.date === dateString);
+            });
+
+
+            for (const dateToFetch of datesToFetch) {
+                const dateString = format(dateToFetch, 'ddMMMyyyy').toUpperCase();
+                console.log("dateString", dateString);
+
+                const params = {
+                    loginId: 'DC-UDAY8511',
+                    accessToken: accessToken,
+                    inst: company.inst,
+                    product: 'DIRECTRTLITE',
+                    tradeDate: dateString,
+                    symbol: company.symbol,
+                    companyId: company._id,
+                };
+
+                const apiData = await fetchDataFromApi(params);
+
+                await savePerformanceData(params, apiData);
+            }
+
+            console.log('Daily job completed successfully.');
+        }
+    } catch (error) {
+        console.error('Error in daily job:', error);
+    }
+});
+// end function cron job
 
 exports.getAllCompanies = async (req, res) => {
     try {
@@ -876,6 +929,99 @@ exports.getDailyStatsByDate = async (req, res) => {
     }
 };
 
+exports.getDailyGraphStatsByDate = async (req, res) => {
+    try {
+        const companyId = req.params.companyId;
+        const dateParam = new Date(req.params.date);
+
+        if (isNaN(dateParam)) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        const company = await Company.findById(companyId);
+
+        if (!company) {
+            return res.status(404).json({ message: 'Company not found' });
+        }
+
+        const performance = company.overView.performance;
+
+        if (!performance || performance.length === 0) {
+            return res.status(404).json({ message: 'No performance data available' });
+        }
+
+        const dataForDate = performance.find(entry => entry.date.getTime() === dateParam.getTime());
+
+        if (!dataForDate) {
+            return res.status(404).json({ message: 'Performance data for the specified date not found' });
+        }
+
+        const historicalDataForDate = dataForDate.details;
+
+        if (!historicalDataForDate || historicalDataForDate.length === 0) {
+            return res.status(404).json({ message: 'No historical data available for the specified date' });
+        }
+
+        // Extract properties for graph rendering
+        const labels = historicalDataForDate.map(entry => entry.time);
+        const volumeData = historicalDataForDate.map(entry => entry.Volume);
+        const previousCloseData = historicalDataForDate.map(entry => entry.PreviousClose);
+        const openData = historicalDataForDate.map(entry => entry.Open);
+        const todayLowData = historicalDataForDate.map(entry => entry.TodayLow);
+        const todayHighData = historicalDataForDate.map(entry => entry.TodayHigh);
+
+        // Format data for graph rendering
+        const graphData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Volume',
+                    data: volumeData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Previous Close',
+                    data: previousCloseData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Open',
+                    data: openData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Today Low',
+                    data: todayLowData,
+                    backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Today High',
+                    data: todayHighData,
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                },
+            ],
+        };
+
+        return res.status(200).json({
+            message: 'Historical data retrieved successfully',
+            data: graphData,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+
 
 exports.getDailyStatsByDay = async (req, res) => {
     try {
@@ -1357,3 +1503,149 @@ async function savePerformanceData2(loginId, accessToken, inst, product, tradeDa
 
 
 
+
+const socketClusterClient = require('socketcluster-client');
+
+let socket;
+
+// function handle_message(channel, message) {
+//     console.log(`message: ${message} - received from channel ${channel}`);
+// }
+
+async function handle_message(channel, message) {
+    console.log(`message: ${JSON.stringify(message)} - received from channel ${channel}`);
+
+    const newData = new LiveData({
+        channel: channel,
+        message1: {
+            UniqueName: message.UniqueName,
+            Symbol: message.Symbol,
+            Ticker: message.Ticker,
+            Exchange: message.Exchange,
+            InstrumentType: message.InstrumentType,
+            ExpiryString: message.ExpiryString,
+            StrikePriceString: message.StrikePriceString,
+            StrikePrice: message.StrikePrice,
+            OptionType: message.OptionType,
+            LastTradedTime: message.LastTradedTime,
+            LTD: message.LTD,
+            LTT: message.LTT,
+            BBP: message.BBP,
+            BBQ: message.BBQ,
+            BSP: message.BSP,
+            BSQ: message.BSQ,
+            LTP: message.LTP,
+            Open: message.Open,
+            High: message.High,
+            Low: message.Low,
+            Vol: message.Vol,
+            PrevVol: message.PrevVol,
+            DayOpen: message.DayOpen,
+            DayHighest: message.DayHighest,
+            DayLowest: message.DayLowest,
+            PrevClose: message.PrevClose,
+            TTQ: message.TTQ,
+            OI: message.OI,
+            PrevOI: message.PrevOI,
+            ATP: message.ATP,
+            TTV: message.TTV,
+            IV: message.IV
+        }
+    });
+
+    console.log('Before saving to database');
+    await newData.save();
+    console.log('After saving to database')
+        .then(() => console.log('Data saved to database'))
+        .catch(error => console.error('Error saving data to database:', error));
+}
+
+function subscribe_to_channel(socket, ticker) {
+    (async () => {
+        // const channel_name = `${ticker}`;
+        const channel_name = `${ticker}.json`;
+
+        console.log(`subscribing to channel ${channel_name}`);
+        let myChannel = socket.subscribe(channel_name);
+
+        await myChannel.listener('subscribe').once();
+
+        (async () => {
+            for await (let data of myChannel) {
+                handle_message("SUBSCRIPTION-" + channel_name, data);
+            }
+        })();
+    })();
+}
+
+exports.main = async function main(dynamicTicker) {
+    const loginId = 'DC-UDAY8511';
+    const product = 'DIRECTRTLITE';
+    const apikey = '4A771C49C9534D8CAD3F';
+
+    const authEndPoint = `http://s3.vbiz.in/directrt/gettoken?loginid=${loginId}&product=${product}&apikey=${apikey}`;
+
+    axios
+        .get(authEndPoint)
+        .then(function (res) {
+            console.log(`statusCode: ${res.status}`);
+
+            if (res.status === 200) {
+                console.log("Response: " + JSON.stringify(res.data));
+
+                if (!res.data.hasOwnProperty('Status')) {
+                    console.log('Authentication status not returned in payload. Exiting.');
+                    return;
+                }
+
+                if (!res.data.hasOwnProperty('AccessToken')) {
+                    console.log('Access token not returned in payload. Exiting.');
+                    return;
+                }
+
+                const access_token = res.data['AccessToken'];
+                const is_authenticated = res.data['Status'];
+                if (!is_authenticated) {
+                    console.log('Authentication NOT successful. Exiting.');
+                    return;
+                }
+
+                console.log('Access token:', access_token);
+                console.log('CSV Headers:', res.data['Message']);
+
+                console.log('Connecting to websocket...');
+                const wsEndPoint = `116.202.165.216:992/directrt/?loginid=${loginId}&accesstoken=${access_token}&product=${product}`;
+
+                socket = socketClusterClient.create({
+                    hostname: wsEndPoint,
+                    path: '',
+                    port: 80
+                });
+
+                var myInterval = setInterval(async () => {
+                    console.log('Websocket connection state:', socket.state);
+
+                    if (socket.state === 'open') {
+                        console.log('Websocket connection is open');
+                        clearInterval(myInterval);
+
+                        // subscribe_to_channel(socket, 'NSE_STOCK_INFY.json');
+                        subscribe_to_channel(socket, dynamicTicker);
+                    } else if (socket.state === 'closed') {
+                        console.log('Websocket connection is closed. Exiting.');
+                        clearInterval(myInterval);
+                        return;
+                    }
+                }, 1000);
+            } else {
+                console.log(`Server-side error occurred when getting access token, status code returned was ${res.status}\r\nResponse: ${JSON.stringify(res)}`);
+                return;
+            }
+        })
+        .catch(error => {
+            console.error(`Exception occurred: ${error}`);
+            return;
+        });
+}
+
+// main(dynamicTicker);

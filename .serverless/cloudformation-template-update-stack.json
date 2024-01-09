@@ -74,7 +74,7 @@
     "AppLogGroup": {
       "Type": "AWS::Logs::LogGroup",
       "Properties": {
-        "LogGroupName": "/aws/lambda/udayan-stock"
+        "LogGroupName": "/aws/lambda/udayan-stock1"
       }
     },
     "IamRoleLambdaExecution": {
@@ -102,7 +102,7 @@
               "Fn::Join": [
                 "-",
                 [
-                  "udayan-stock",
+                  "udayan-stock1",
                   "dev",
                   "lambda"
                 ]
@@ -120,7 +120,7 @@
                   ],
                   "Resource": [
                     {
-                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/udayan-stock:*"
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/udayan-stock1:*"
                     }
                   ]
                 },
@@ -131,7 +131,7 @@
                   ],
                   "Resource": [
                     {
-                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/udayan-stock:*:*"
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/udayan-stock1:*:*"
                     }
                   ]
                 }
@@ -144,7 +144,7 @@
           "Fn::Join": [
             "-",
             [
-              "udayan-stock",
+              "udayan-stock1",
               "dev",
               {
                 "Ref": "AWS::Region"
@@ -162,11 +162,11 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/udayan-stock/dev/1697103677942-2023-10-12T09:41:17.942Z/udayan-stock.zip"
+          "S3Key": "serverless/udayan-stock1/dev/1704810285943-2024-01-09T14:24:45.943Z/udayan-stock1.zip"
         },
         "Handler": "index.handler",
         "Runtime": "nodejs18.x",
-        "FunctionName": "udayan-stock",
+        "FunctionName": "udayan-stock1",
         "MemorySize": 1024,
         "Timeout": 6,
         "Role": {
@@ -180,20 +180,20 @@
         "AppLogGroup"
       ]
     },
-    "AppLambdaVersionKHhRoJVxwE7Cf1LNIWrgTPk4rxGkX7DSI0h2dMxZNY": {
+    "AppLambdaVersionu6t8XxJzeaTdNlYiNllu7bIEOeAfajoYE0j3EyMEF0": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "AppLambdaFunction"
         },
-        "CodeSha256": "crEBzj99+z39jq0Itj3dqHENo5/M+t82sK7qazFga7A="
+        "CodeSha256": "m1013IBUpJiF6Az8mxI7sJmV6d6hcz0tIMsel7iEkOQ="
       }
     },
     "ApiGatewayRestApi": {
       "Type": "AWS::ApiGateway::RestApi",
       "Properties": {
-        "Name": "dev-udayan-stock",
+        "Name": "dev-udayan-stock1",
         "BinaryMediaTypes": [
           "multipart/form-data"
         ],
@@ -408,7 +408,7 @@
         "AppLambdaPermissionApiGateway"
       ]
     },
-    "ApiGatewayDeployment1697103607024": {
+    "ApiGatewayDeployment1704810203670": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -467,16 +467,16 @@
         "Ref": "ServerlessDeploymentBucket"
       },
       "Export": {
-        "Name": "sls-udayan-stock-dev-ServerlessDeploymentBucketName"
+        "Name": "sls-udayan-stock1-dev-ServerlessDeploymentBucketName"
       }
     },
     "AppLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "AppLambdaVersionKHhRoJVxwE7Cf1LNIWrgTPk4rxGkX7DSI0h2dMxZNY"
+        "Ref": "AppLambdaVersionu6t8XxJzeaTdNlYiNllu7bIEOeAfajoYE0j3EyMEF0"
       },
       "Export": {
-        "Name": "sls-udayan-stock-dev-AppLambdaFunctionQualifiedArn"
+        "Name": "sls-udayan-stock1-dev-AppLambdaFunctionQualifiedArn"
       }
     },
     "ServiceEndpoint": {
@@ -502,7 +502,7 @@
         ]
       },
       "Export": {
-        "Name": "sls-udayan-stock-dev-ServiceEndpoint"
+        "Name": "sls-udayan-stock1-dev-ServiceEndpoint"
       }
     }
   }

@@ -18,7 +18,9 @@ const {
     getFundamentalsByCompanyId,
     getDailyStats,
     getDailyStatsByDate,
-    getDailyStatsByDay
+    getDailyGraphStatsByDate,
+    getDailyStatsByDay,
+    main
 } = require('../controllers/companyController');
 
 const { validateCompany, performanceValidation, createFundamentalsSchema, validateDailyStats } = require('../validation/companyValidation');
@@ -65,7 +67,20 @@ router.get('/api/:companyId/fundamentals', [authJwt.verifyToken], getFundamental
 //Daliy updates
 router.get('/api/companies/:companyId/daily-stats', [authJwt.verifyToken], getDailyStats);
 router.get('/api/companies/:companyId/daily-statsBy-date/:date', [authJwt.verifyToken], getDailyStatsByDate);
+router.get('/api/companies/:companyId/graph/daily-statsBy-date/:date', [authJwt.verifyToken], getDailyGraphStatsByDate);
 router.get('/api/companies/:companyId/daily-statsBy/:day', [authJwt.verifyToken], getDailyStatsByDay);
+
+router.post('/api/companies/start-live-data/get', (req, res) => {
+    const dynamicTicker = req.body.dynamicTicker;
+
+    if (!dynamicTicker) {
+        return res.status(400).json({ error: 'Dynamic ticker is required.' });
+    }
+
+    main(dynamicTicker);
+
+    return res.status(200).json({ message: `Subscribed to ${dynamicTicker}.` });
+});
 
 
 module.exports = router;
