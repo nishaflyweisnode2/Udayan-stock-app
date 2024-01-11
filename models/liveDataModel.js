@@ -5,7 +5,7 @@ const liveDataSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    message1: {
+    message: {
         UniqueName: String,
         Symbol: String,
         Ticker: String,

@@ -5,6 +5,7 @@ const { parse } = require('papaparse');
 const cron = require('node-cron');
 const schedule = require('node-schedule');
 const { subYears, format, startOfDay, eachDayOfInterval } = require('date-fns');
+const moment = require('moment');
 
 
 const { validateCompany, updateValidateCompany, performanceValidation, createFundamentalsSchema } = require('../validation/companyValidation');
@@ -312,8 +313,8 @@ exports.createCompany = async (req, res) => {
 
 // Function for start automatic cron job 
 // const job = schedule.scheduleJob('0 3 * * *', async () => {
-// const job = schedule.scheduleJob('* * * * *', async () => {
 const job = schedule.scheduleJob('0 22 * * *', async () => {
+    // const job = schedule.scheduleJob('* * * * *', async () => {
     try {
         console.log("Function In Cron Job Started");
 
@@ -1513,51 +1514,20 @@ let socket;
 // }
 
 async function handle_message(channel, message) {
-    console.log(`message: ${JSON.stringify(message)} - received from channel ${channel}`);
+    let cleanedChannel = channel.replace('SUBSCRIPTION-', '');
 
-    const newData = new LiveData({
-        channel: channel,
-        message1: {
-            UniqueName: message.UniqueName,
-            Symbol: message.Symbol,
-            Ticker: message.Ticker,
-            Exchange: message.Exchange,
-            InstrumentType: message.InstrumentType,
-            ExpiryString: message.ExpiryString,
-            StrikePriceString: message.StrikePriceString,
-            StrikePrice: message.StrikePrice,
-            OptionType: message.OptionType,
-            LastTradedTime: message.LastTradedTime,
-            LTD: message.LTD,
-            LTT: message.LTT,
-            BBP: message.BBP,
-            BBQ: message.BBQ,
-            BSP: message.BSP,
-            BSQ: message.BSQ,
-            LTP: message.LTP,
-            Open: message.Open,
-            High: message.High,
-            Low: message.Low,
-            Vol: message.Vol,
-            PrevVol: message.PrevVol,
-            DayOpen: message.DayOpen,
-            DayHighest: message.DayHighest,
-            DayLowest: message.DayLowest,
-            PrevClose: message.PrevClose,
-            TTQ: message.TTQ,
-            OI: message.OI,
-            PrevOI: message.PrevOI,
-            ATP: message.ATP,
-            TTV: message.TTV,
-            IV: message.IV
-        }
-    });
-
-    console.log('Before saving to database');
-    await newData.save();
+    let obj = {
+        channel: cleanedChannel,
+        message: JSON.parse(message)
+    }
+    console.log(obj);
+    let saved = await LiveData.create(obj);
+    if (saved) {
+        console.log('Data saved to database')
+    } else {
+        console.error('Error saving data to database:')
+    }
     console.log('After saving to database')
-        .then(() => console.log('Data saved to database'))
-        .catch(error => console.error('Error saving data to database:', error));
 }
 
 function subscribe_to_channel(socket, ticker) {
@@ -1649,3 +1619,34 @@ exports.main = async function main(dynamicTicker) {
 }
 
 // main(dynamicTicker);
+
+exports.getLiveDataForCompany = async (req, res) => {
+    const uniqueName = req.params.uniqueName;
+    const queryDate = req.query.queryDate;
+
+    try {
+        let query = { 'message.UniqueName': uniqueName };
+
+        if (queryDate) {
+            const startDate = moment(queryDate).startOf('day');
+            const endDate = moment(queryDate).endOf('day');
+
+            query['message.LastTradedTime'] = {
+                $gte: startDate.toDate(),
+                $lte: endDate.toDate(),
+            };
+        }
+
+        const liveData = await LiveData.find(query);
+
+        if (liveData && liveData.length > 0) {
+            return res.status(200).json({ status: 200, data: liveData });
+        } else {
+            return res.status(404).json({ status: 404, message: 'Live data not found' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error' });
+    }
+};
+

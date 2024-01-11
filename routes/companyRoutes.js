@@ -20,7 +20,8 @@ const {
     getDailyStatsByDate,
     getDailyGraphStatsByDate,
     getDailyStatsByDay,
-    main
+    main,
+    getLiveDataForCompany
 } = require('../controllers/companyController');
 
 const { validateCompany, performanceValidation, createFundamentalsSchema, validateDailyStats } = require('../validation/companyValidation');
@@ -81,6 +82,8 @@ router.post('/api/companies/start-live-data/get', (req, res) => {
 
     return res.status(200).json({ message: `Subscribed to ${dynamicTicker}.` });
 });
+
+router.get('/api/companies/livedata/:uniqueName', [authJwt.verifyToken], getLiveDataForCompany)
 
 
 module.exports = router;
